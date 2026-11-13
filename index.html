@@ -28,6 +28,8 @@ a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .arch{background:linear-gradient(160deg,#2a1a0a,#7a3b12 55%,#c9702a)}
 .spot{background:linear-gradient(160deg,#b8365e,#d9667f 55%,#e8a05a)}
 .mole{background:linear-gradient(160deg,#3f7d2a,#6aa84f 55%,#c99a3a)}
+.tick{background:linear-gradient(160deg,#2b2f8a,#5a5fd6 55%,#9a7fe0)}
+.quiz{background:linear-gradient(160deg,#124a6e,#1f6f9e 55%,#3a9a8a)}
 .tag{display:inline-block;font-size:12px;font-weight:900;background:var(--gold);color:#171a26;border-radius:6px;padding:2px 7px;margin-bottom:8px}
 .soon{border:1.5px dashed var(--line);border-radius:16px;padding:18px 20px;color:var(--muted);font-size:14px}
 .last{margin-top:18px;font-size:13px;color:var(--muted)}
@@ -68,6 +70,18 @@ a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
       <p>45초 동안 두더지를 잡으세요. 안전모 두더지는 두 번, 황금 두더지는 재빨리, 폭탄은 피하기. 콤보로 점수 폭발.</p>
       <span class="go">들어가기</span>
     </a>
+    <a class="game tick" href="timer.html">
+      <span class="tag">감각</span>
+      <h2>10초 맞추기</h2>
+      <p>사라진 시계를 감으로 멈추기. 5라운드 오차 합계로 승부. 손 빠르기와 상관없는 가장 공평한 게임.</p>
+      <span class="go">들어가기</span>
+    </a>
+    <a class="game quiz" href="quiz.html">
+      <span class="tag">지식</span>
+      <h2>건축·안전 퀴즈</h2>
+      <p>콘크리트, 비파괴시험, 구조역학, 산업안전 44문제 중 10문제. 빨리 맞힐수록 고득점. 직접 문제 추가 가능.</p>
+      <span class="go">들어가기</span>
+    </a>
     <div class="soon">다음 게임 준비 중</div>
   </div>
   <p class="last" id="last"></p>
@@ -75,12 +89,14 @@ a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 <script>
 (function(){
   function load(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
-  const a = load('dr3d-last'), b = load('bump-last'), c = load('arch-last'), d = load('diff-last'), e = load('mole-last'), parts = [];
+  const a = load('dr3d-last'), b = load('bump-last'), c = load('arch-last'), d = load('diff-last'), e = load('mole-last'), f = load('tick-last'), g = load('quiz-last'), parts = [];
   if (a) parts.push(`레이스 지난 당직: ${a.who} (${a.date})`);
   if (b) parts.push(`범퍼카 지난 당직: ${b.who} (${b.date})`);
   if (c) parts.push(`양궁 지난 당직: ${c.who} (${c.date})`);
   if (d) parts.push(`틀린그림 지난 당직: ${d.who} (${d.date})`);
   if (e) parts.push(`두더지 지난 당직: ${e.who} (${e.date})`);
+  if (f) parts.push(`10초 지난 당직: ${f.who} (${f.date})`);
+  if (g) parts.push(`퀴즈 지난 당직: ${g.who} (${g.date})`);
   document.getElementById('last').textContent = parts.join(' / ');
   const q = location.search; if (q) document.querySelectorAll('a.game').forEach(x => x.href += q);
 })();
