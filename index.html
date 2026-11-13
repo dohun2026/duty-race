@@ -25,6 +25,7 @@ a.game .go{position:absolute;right:16px;bottom:14px;background:rgba(255,255,255,
 a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .race{background:linear-gradient(160deg,#0a1433,#1b2b63 60%,#2a3c7a)}
 .bump{background:linear-gradient(160deg,#140b2e,#3a1b5e 60%,#6a2a6e)}
+.arch{background:linear-gradient(160deg,#2a1a0a,#7a3b12 55%,#c9702a)}
 .tag{display:inline-block;font-size:12px;font-weight:900;background:var(--gold);color:#171a26;border-radius:6px;padding:2px 7px;margin-bottom:8px}
 .soon{border:1.5px dashed var(--line);border-radius:16px;padding:18px 20px;color:var(--muted);font-size:14px}
 .last{margin-top:18px;font-size:13px;color:var(--muted)}
@@ -47,6 +48,12 @@ a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
       <p>줄어드는 원형 무대에서 서로 들이받아 떨어뜨리기. 마지막까지 버티는 사람이 승리.</p>
       <span class="go">들어가기</span>
     </a>
+    <a class="game arch" href="archery.html">
+      <span class="tag">정밀</span>
+      <h2>바람의 양궁</h2>
+      <p>50m 과녁에 3발씩 3세트. 계속 바뀌는 바람을 읽고 조준점과 힘을 맞추세요. 실시간 점수판.</p>
+      <span class="go">들어가기</span>
+    </a>
     <div class="soon">다음 게임 준비 중</div>
   </div>
   <p class="last" id="last"></p>
@@ -54,9 +61,10 @@ a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 <script>
 (function(){
   function load(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
-  const a = load('dr3d-last'), b = load('bump-last'), parts = [];
+  const a = load('dr3d-last'), b = load('bump-last'), c = load('arch-last'), parts = [];
   if (a) parts.push(`레이스 지난 당직: ${a.who} (${a.date})`);
   if (b) parts.push(`범퍼카 지난 당직: ${b.who} (${b.date})`);
+  if (c) parts.push(`양궁 지난 당직: ${c.who} (${c.date})`);
   document.getElementById('last').textContent = parts.join(' / ');
   const q = location.search; if (q) document.querySelectorAll('a.game').forEach(x => x.href += q);
 })();
