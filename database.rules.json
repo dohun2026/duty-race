@@ -1,0 +1,17 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        "peers": {
+          ".read": true,
+          "$peer": {
+            ".write": true,
+            ".validate": "!newData.exists() || (newData.hasChild('t') && newData.child('nick').isString() && newData.child('nick').val().length <= 12)"
+          }
+        }
+      }
+    }
+  }
+}
