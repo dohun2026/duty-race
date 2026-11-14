@@ -249,7 +249,7 @@ body.solo .only-solo, body.online .only-online{display:block}
     <button class="start" id="raceBtn">게임 시작</button>
     <p class="note" id="lobbyNote">기다리는 동안 무대에서 연습할 수 있습니다. 떨어져도 다시 살아납니다.</p>
   </div>
-  <details class="" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 무대 밖으로 떨어지지 않고 끝까지 살아남기.</li><li>앞으로는 자동으로 가요. <b>회전, 후진, 대시</b>만 조작합니다.</li><li><b>PC</b> ← → 회전, ↓ 후진, 스페이스 대시</li><li><b>대시</b>는 2.5초마다 한 번 쓸 수 있는 순간 돌진이에요. 들이받기의 핵심!</li><li><b>무거운 차</b>(픽업, SUV)는 잘 안 밀리고, <b>가벼운 차</b>(해치백)는 날렵하지만 잘 밀려요.</li><li>20초가 지나면 <b>무대가 줄어들어요</b>. 가장자리가 빨갛게 깜빡이면 조심!</li><li>누가 누구를 떨어뜨렸는지 화면 위에 표시되고, 결과에도 기록돼요.</li><li>연습 중엔 떨어져도 다시 살아나요.</li></ul></details>
+  <details class="" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 무대 밖으로 떨어지지 않고 끝까지 살아남기.</li><li>앞으로는 자동으로 가요. <b>회전, 후진, 대시</b>만 조작합니다.</li><li><b>PC</b> ← → 회전, ↓ 후진, 스페이스 대시</li><li><b>대시</b>는 2.5초마다 한 번 쓸 수 있는 순간 돌진이에요. 대시로 들이받으면 상대가 크게 튕겨나가고, 나는 거의 안 밀려요.</li><li><b>뒤에서 대시</b>로 박으면 가장 멀리 날아가고, <b>옆</b>은 보통, <b>정면</b>은 덜 튕겨요. 둘 다 대시로 정면충돌하면 서로 조금씩만 밀려요.</li><li><b>무거운 차</b>(픽업, SUV)는 잘 안 밀리고, <b>가벼운 차</b>(해치백)는 날렵하지만 잘 밀려요.</li><li>20초가 지나면 <b>무대가 줄어들어요</b>. 가장자리가 빨갛게 깜빡이면 조심!</li><li>누가 누구를 떨어뜨렸는지 화면 위에 표시되고, 결과에도 기록돼요.</li><li>연습 중엔 떨어져도 다시 살아나요.</li></ul></details>
   <div class="tc l">
     <button data-k="left" aria-label="왼쪽">◀</button>
     <button data-k="right" aria-label="오른쪽">▶</button>
@@ -304,7 +304,7 @@ window.createNetRoom = async function(){
     const me = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
     const base = db.ref('rooms/bump-' + ROOM_ID + '/peers');
     const myRef = base.child(me);
-    const POS = ['x', 'z', 'y', 'h', 'p', 'b', 'vx', 'vz', 'fl', 'd'];
+    const POS = ['x', 'z', 'y', 'h', 'p', 'b', 'vx', 'vz', 'fl', 'd', 'ds'];
     let mine = {}, others = {}, snap = Object.freeze([]), listeners = [], timer = null, lastWrite = 0;
     const build = () => {
       const all = Object.assign({}, others); all[me] = mine;
@@ -465,6 +465,7 @@ function glowTex(inner, outer){
 })();
 
 // 무대
+const DASH_WIN = 0.5;
 const ARENA_R0 = 30, ARENA_MIN = 10, SHRINK_START = 20, SHRINK_END = 80, HARD_END = 120, CAR_R = 1.6;
 let arenaR = ARENA_R0;
 const arena = new THREE.Group(); scene.add(arena);
@@ -686,15 +687,17 @@ function update(dt){
   let vF = c.vx * fx + c.vz * fz, vL = c.vx * fz - c.vz * fx;
   const target = keys.brake ? -sp.top * 0.55 : sp.top;
   const dv = target - vF;
-  vF += Math.max(-sp.acc * 1.6 * dt, Math.min(sp.acc * dt, dv));
-  vL *= Math.exp(-3.2 * dt);
+  c.kbT = Math.max(0, (c.kbT || 0) - dt);
+  const kb = c.kbT > 0;
+  vF += Math.max(-sp.acc * (kb ? 0.55 : 1.6) * dt, Math.min(sp.acc * (kb ? 0.3 : 1) * dt, dv));
+  vL *= Math.exp(-(kb ? 0.8 : 3.2) * dt);
   const st = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
   c.st += (st - c.st) * Math.min(1, dt * 10);
-  c.h -= c.st * sp.steer * dt * Math.min(1, Math.abs(vF) / 4 + 0.35) * (vF < -0.5 ? -1 : 1);
+  c.h -= c.st * sp.steer * (kb ? 0.4 : 1) * dt * Math.min(1, Math.abs(vF) / 4 + 0.35) * (vF < -0.5 ? -1 : 1);
   const nfx = Math.sin(c.h), nfz = Math.cos(c.h);
   c.vx = nfx * vF + nfz * vL; c.vz = nfz * vF - nfx * vL;
   c.dashCd = Math.max(0, c.dashCd - dt);
-  if (keys.boost && c.dashCd <= 0){ c.vx += nfx * sp.dash; c.vz += nfz * sp.dash; c.dashCd = 2.5; sparks(c.x - nfx * 2.2, 0.6, c.z - nfz * 2.2, 18, 8); }
+  if (keys.boost && c.dashCd <= 0 && !kb){ c.vx += nfx * sp.dash; c.vz += nfz * sp.dash; c.dashCd = 2.5; c.dashT = c.clock; sparks(c.x - nfx * 2.2, 0.6, c.z - nfz * 2.2, 18, 8); }
   c.x += c.vx * dt; c.z += c.vz * dt;
   // 충돌 (내 차에만 반영, 상대 화면에서도 같은 계산을 대칭으로 함)
   on.remotes.forEach((r, k) => {
@@ -708,7 +711,16 @@ function update(dt){
     const now = performance.now();
     if (vrel < 0 && (hitCd.get(k) || 0) < now){
       const j = -(1 + 1.15) * vrel / (1 / m1 + 1 / m2);
-      c.vx += j / m1 * nx; c.vz += j / m1 * nz;
+      // 대시 박치기 보정: 맞은 쪽은 크게 튕겨나가고, 대시한 쪽은 거의 안 튕김
+      const myDash = c.clock - (c.dashT == null ? -9 : c.dashT) < DASH_WIN, theirDash = !!r.ds;
+      const fme = nfx * nx + nfz * nz;            // >0 이면 상대가 내 뒤에 있음
+      const where = fme > 0.45 ? 'rear' : fme < -0.45 ? 'front' : 'side';
+      let k = 1, label = '';
+      if (theirDash && !myDash){ k = where === 'rear' ? 1.55 : where === 'side' ? 1.45 : 0.95; label = where === 'rear' ? '뒤에서 대시 박치기!' : where === 'side' ? '옆구리 대시!' : '정면 대시!'; }
+      else if (theirDash && myDash){ k = where === 'front' ? 0.7 : where === 'side' ? 1.15 : 1.4; label = where === 'front' ? '정면 충돌!' : '대시 맞대결!'; }
+      else if (myDash && !theirDash){ k = 0.5; }
+      c.vx += j / m1 * nx * k; c.vz += j / m1 * nz * k;
+      if (theirDash && Math.abs(j) > 6){ c.kbT = Math.max(c.kbT || 0, 0.25 + 0.5 * Math.max(0, k - 0.9)); if (label) toast(label); }
       hitCd.set(k, now + 180);
       const power = Math.abs(j);
       const cx = c.x - nx * CAR_R, cz = c.z - nz * CAR_R;
@@ -717,7 +729,7 @@ function update(dt){
         sparks(cx, 0.8, cz, Math.min(46, power * 2.2 | 0), 9 + Math.min(8, power / 4)); shake = Math.min(1.3, power / 30);
         impactRing(cx, cz, power); squash(c, nx, nz, c.h, power); squash(r, nx, nz, r.h, power * (m1 / m2));
         hitStop = Math.max(hitStop, Math.min(0.11, 0.035 + power / 400));
-        if (power > 14){ toast(power > 26 ? '콰앙!!' : '쾅!'); flashA = Math.min(0.35, power / 90); }
+        if (power > 14){ if (!theirDash) toast(power > 26 ? '콰앙!!' : '쾅!'); flashA = Math.min(0.35, power * Math.max(1, k) / 90); }
       }
     }
   });
@@ -895,7 +907,7 @@ function syncRemotes(){
       r = { obj, nick, color, type, x: pr.x, z: pr.z, y: +pr.y || 0, h: +pr.h || 0, tx: pr.x, tz: pr.z };
       on.remotes.set(k, r);
     }
-    r.tx = pr.x; r.tz = pr.z; r.ty = +pr.y || 0; r.th = +pr.h || 0; r.vx = +pr.vx || 0; r.vz = +pr.vz || 0; r.fl = !!pr.fl; r.out = pr.o != null;
+    r.tx = pr.x; r.tz = pr.z; r.ty = +pr.y || 0; r.th = +pr.h || 0; r.vx = +pr.vx || 0; r.vz = +pr.vz || 0; r.ds = pr.ds === 1; r.fl = !!pr.fl; r.out = pr.o != null;
   });
 }
 function renderLobby(){
@@ -949,6 +961,7 @@ function frame(ts){
     r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.y += (r.ty - r.y) * k; r.h = angLerp(r.h, r.th, k);
     r.obj.position.set(r.x, r.y, r.z); r.obj.rotation.y = r.h;
     applySquash(r, r.obj.userData.body, dt);
+    if (r.ds && rnd() < 0.6) sparks(r.x - Math.sin(r.h) * 2.2, 0.6, r.z - Math.cos(r.h) * 2.2, 2, 5);
   });
   // 내 차
   if (me && carObj.visible){
@@ -976,7 +989,7 @@ function frame(ts){
   // 전송
   if (on.room && me && !me.out && (st === 'lobby' || st === 'fight' || st === 'count') && ts - on.sendT > 60){
     on.sendT = ts;
-    on.room.presence({ x: +me.x.toFixed(2), z: +me.z.toFixed(2), y: +me.y.toFixed(2), h: +me.h.toFixed(3), vx: +me.vx.toFixed(2), vz: +me.vz.toFixed(2), fl: me.falling ? 1 : 0, d: +Math.hypot(me.x, me.z).toFixed(2) }).catch(() => {});
+    on.room.presence({ x: +me.x.toFixed(2), z: +me.z.toFixed(2), y: +me.y.toFixed(2), h: +me.h.toFixed(3), vx: +me.vx.toFixed(2), vz: +me.vz.toFixed(2), ds: (me.clock || 0) - (me.dashT == null ? -9 : me.dashT) < DASH_WIN ? 1 : 0, fl: me.falling ? 1 : 0, d: +Math.hypot(me.x, me.z).toFixed(2) }).catch(() => {});
   }
   // HUD
   $('#hWho').textContent = (me && !me.out && st !== 'spec') ? on.nick : '관전 중';

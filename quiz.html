@@ -141,6 +141,19 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .mylist li button{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:7px;padding:3px 8px;font:inherit;font-size:12px;cursor:pointer}
 .cats{flex-wrap:wrap}.cats button{flex:1 1 30%}
 .editor select{width:100%;font:inherit;font-size:15px;padding:9px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--text);margin-top:6px}
+.subj{display:flex;gap:8px}
+.subj input{flex:1;min-width:0;font:inherit;font-size:19px;padding:13px 14px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--text)}
+.subj input:focus{outline:none;border-color:var(--accent)}
+.subj input.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,var(--bg))}
+.subj input.bad{border-color:var(--red)}
+.subj input.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.subj button{display:flex;align-items:center;justify-content:center}
+.subj button,.hintbtn{padding:0 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;font:inherit;font-weight:900;font-size:16px;cursor:pointer}
+.hintbtn{margin-top:10px;padding:10px 16px;background:var(--bg);color:var(--text);border:1.5px solid var(--line)}
+.qhint{margin:12px 0 0;font-size:clamp(18px,4vw,24px);font-weight:900;letter-spacing:.12em;color:var(--accent);min-height:1.4em;word-break:keep-all}
+.qhint.ans{color:var(--ok);letter-spacing:.02em}
+.opts.subjbox{display:block}
 .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-weight:700;font-size:14px;cursor:pointer}
 .chk input{width:18px;height:18px}
 
@@ -249,7 +262,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
         <button class="start" id="raceBtn">경기 시작</button>
         <p class="note" id="lobbyNote"></p>
       </div>
-      <details class="box how" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 10문제를 빠르고 정확하게 맞히기.</li><li>문제당 12초. 맞히면 <b>500점 + 빨리 맞힐수록 최대 500점 보너스</b>.</li><li>한 번 고르면 바꿀 수 없어요. PC는 숫자키 1~4로도 고를 수 있어요.</li><li>시간이 끝나면 정답과 해설이 나와요.</li><li>분야는 경기를 시작한 사람이 고른 것으로 나와요.</li><li>지금 보이는 맛보기 문제를 풀면 바로 해설이 나와요. 공부용으로도 좋아요.</li></ul></details>
+      <details class="box how" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 10문제를 빠르고 정확하게 맞히기.</li><li>객관식은 문제당 12초. 맞히면 <b>500점 + 빨리 맞힐수록 최대 500점 보너스</b>.</li><li>한 번 고르면 바꿀 수 없어요. PC는 숫자키 1~4로도 고를 수 있어요.</li><li>시간이 끝나면 정답과 해설이 나와요.</li><li><b>넌센스</b>는 주관식이에요. 답을 직접 입력하고 Enter! 24초 동안 6초마다 힌트가 나와요: 글자 수 → 첫 글자 자음 → 둘째 글자 자음. 빨리 맞힐수록 점수가 높고, 틀려도 다시 입력할 수 있어요.</li><li>분야는 경기를 시작한 사람이 고른 것으로 나와요.</li><li>지금 보이는 맛보기 문제를 풀면 바로 해설이 나와요. 공부용으로도 좋아요.</li></ul></details>
       <div class="box" id="boardBox" style="display:none">
         <h3>실시간 점수 <small id="boardCat">10문제</small></h3>
         <ul id="board"></ul>
@@ -335,7 +348,7 @@ window.createNetRoom = async function(){
 </script>
 <script>
 (function(){
-const GAME_KEY = 'quiz', GO_WORD = '문제!', NQ = 10, QTIME = 12, REVEAL = 4.5, HARD_LIMIT = NQ * (QTIME + REVEAL) + 40;
+const GAME_KEY = 'quiz', GO_WORD = '문제!', NQ = 10, QTIME = 12, QTIME_NON = 24, HINT_AT = [6, 12, 18], REVEAL = 4.5, HARD_LIMIT = NQ * (QTIME_NON + REVEAL) + 40;
 const RESET_FIELDS = { sc: 0, an: null };
 /* 기본 문제: q 문제, o 보기 4개, a 정답 번호(0부터), e 해설 */
 const BANK = [
@@ -886,7 +899,7 @@ const NON = [
 ['넌센스', '미소의 반대말은?', ['당기소', '울상', '찡그림', '무표정'], '미소(미시오) ↔ 당기소(당기시오).'],
 ['넌센스', '세 사람만 탈 수 있는 차는?', ['인삼차', '삼륜차', '트럭', '경차'], '인(人)삼(三)차.'],
 ['넌센스', '소금의 유통기한은?', ['천일', '백일', '만년', '영원'], '천일염이니까.'],
-['넌센스', '세상에서 가장 쉬운 숫자는?', ['190,000', '1', '0', '100'], '십구만(쉽구만).'],
+['넌센스', '세상에서 가장 쉬운 숫자는?', ['십구만', '일', '영', '백'], '190,000, 십구만(쉽구만)!'],
 ['넌센스', '할아버지가 가장 좋아하는 돈은?', ['할머니', '용돈', '세뱃돈', '쌈짓돈'], '할머니(Money).'],
 ['넌센스', '아이스크림이 죽은 이유는?', ['차가와서', '녹아서', '배가 불러서', '추워서'], '차가 와서(차가워서)!'],
 ['넌센스', '전화로 세운 건물은?', ['콜로세움', '전화국', '통신탑', '콜센터'], '콜(call)로 세움.'],
@@ -1147,6 +1160,35 @@ $('#eAdd').onclick = () => {
   $('#eQ').value = ''; $('#eE').value = ''; [0, 1, 2, 3].forEach(i => { $('#eO' + i).value = ''; });
   renderMine(); toast('문제를 추가했습니다');
 };
+// ---------- 넌센스 주관식 ----------
+const qtime = x => x && x.g === 'non' ? QTIME_NON : QTIME;
+const norm = v => String(v || '').toLowerCase().replace(/[\s.,!?~·'"()\-_:;]/g, '');
+const ALT = { '십구만': ['190000', '19만', '십구만원', '190000원'], '6': ['육', '여섯', '6번'], 'usb': ['유에스비'], '다섯': ['5', '다섯개'], '일본사람': ['일본인'], '그림의떡': ['그림떡'], '차가와서': ['차가워서', '차가와서요', '차가와서', '차가와서죽음'] };
+function isRight(input, answer){ const a = norm(answer), v = norm(input); if (!v) return false; if (v === a) return true; return (ALT[a] || []).some(x => norm(x) === v); }
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+function cho(ch){ const c = ch.charCodeAt(0); if (c >= 0xAC00 && c <= 0xD7A3) return CHO[Math.floor((c - 0xAC00) / 588)]; return ch.toUpperCase(); }
+function hintText(answer, stage){
+  if (stage <= 0) return '';
+  const chars = [...answer]; let seen = 0;
+  const out = chars.map(ch => { if (ch === ' ') return ' '; seen++; if ((seen === 1 && stage >= 2) || (seen === 2 && stage >= 3)) return cho(ch); return '○'; }).join('');
+  const n = chars.filter(ch => ch !== ' ').length;
+  return `힌트: ${out}  (${n}글자${stage >= 2 ? ', ' + (stage >= 3 ? '첫째·둘째 글자 자음' : '첫 글자 자음') : ''})`;
+}
+function subjectiveUI(onSubmit, hintBtn){
+  const box = $('#qOpts'); box.innerHTML = ''; box.classList.add('subjbox');
+  const row = document.createElement('div'); row.className = 'subj';
+  const inp = document.createElement('input'); inp.type = 'text'; inp.id = 'sa'; inp.maxLength = 30; inp.autocomplete = 'off'; inp.placeholder = '정답을 입력하고 Enter';
+  const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = '제출';
+  row.append(inp, btn);
+  const hint = document.createElement('p'); hint.className = 'qhint'; hint.id = 'qHint'; hint.textContent = hintBtn ? '' : `힌트는 ${HINT_AT[0]}초 뒤부터 하나씩 나와요`;
+  box.append(row, hint);
+  if (hintBtn){ const hb = document.createElement('button'); hb.type = 'button'; hb.className = 'hintbtn'; hb.textContent = '힌트 보기'; hb.onclick = hintBtn; box.append(hb); }
+  const go = () => { if (inp.disabled) return; onSubmit(inp.value, inp); };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing){ e.preventDefault(); go(); } });
+  btn.onclick = go;
+  setTimeout(() => inp.focus(), 50);
+  return { inp, btn, hint };
+}
 // ---------- 진행 ----------
 const run = { qs: [], t0: 0, answers: [], score: 0, idx: -1, picked: null, revealed: -1, practice: true };
 function raceExtra(){
@@ -1163,19 +1205,38 @@ function raceExtra(){
 }
 function raceValid(r){ return Array.isArray(r.qs) && r.qs.length >= 1 && r.qs.length <= NQ && r.qs.every(validQ); }
 function readFields(pr){ return { sc: Number.isFinite(pr.sc) ? Math.max(0, Math.min(20000, pr.sc)) : 0, an: Array.isArray(pr.an) ? pr.an.slice(0, NQ).map(v => v === 1 ? 1 : 0) : [] }; }
-function beginPlay(r){ run.practice = false; $('#boardCat').textContent = `${catLabel(r.cat)} · 10문제`; run.qs = r.qs.map(x => ({ g: Object.prototype.hasOwnProperty.call(CATS, x.g) ? x.g : 'build', c: clip(x.c, 12), q: clip(x.q, 200), o: x.o.map(s => clip(s, 80)), a: x.a, e: clip(x.e, 200) })); run.t0 = performance.now(); run.answers = []; run.score = 0; run.idx = -1; run.revealed = -1; }
+function beginPlay(r){ run.practice = false; run.lock = 0; $('#boardCat').textContent = `${catLabel(r.cat)} · 10문제`; run.qs = r.qs.map(x => ({ g: Object.prototype.hasOwnProperty.call(CATS, x.g) ? x.g : 'build', c: clip(x.c, 12), q: clip(x.q, 200), o: x.o.map(s => clip(s, 80)), a: x.a, e: clip(x.e, 200) })); run.t0 = performance.now(); run.answers = []; run.score = 0; run.idx = -1; run.revealed = -1;
+  run.starts = []; let acc = 0; run.qs.forEach(x => { run.starts.push(acc); acc += qtime(x) + REVEAL; }); }
 function showQ(i){
   const x = run.qs[i]; run.idx = i; run.picked = null;
-  $('#qNum').textContent = `${i + 1} / ${run.qs.length}`; $('#qCat').textContent = `${CATS[x.g] || '퀴즈'} · ${x.c || '문제'}`;
+  $('#qNum').textContent = `${i + 1} / ${run.qs.length}`; $('#qCat').textContent = (x.c && x.c !== CATS[x.g]) ? `${CATS[x.g] || '퀴즈'} · ${x.c}` : (CATS[x.g] || '퀴즈');
   $('#qText').textContent = x.q; $('#qExp').textContent = '';
-  const box = $('#qOpts'); box.innerHTML = '';
+  const box = $('#qOpts'); box.innerHTML = ''; box.classList.remove('subjbox'); run.hintStage = 0;
+  if (x.g === 'non'){ run.sui = subjectiveUI((v, inp) => submitSubj(v, inp)); return; }
   x.o.forEach((s, k) => { const b = document.createElement('button'); b.type = 'button';
     const n = document.createElement('b'); n.textContent = k + 1; const sp = document.createElement('span'); sp.textContent = s;
     b.append(n, sp); b.onclick = () => pickAns(k); box.append(b); });
 }
+function submitSubj(v, inp){
+  if (on.state !== 'play' || run.picked != null || run.idx < 0) return;
+  const now = performance.now(); if (now < (run.lock || 0)) return;
+  const x = run.qs[run.idx], el = (now - (run.t0 + run.starts[run.idx] * 1000)) / 1000, qt = qtime(x);
+  if (el > qt || !norm(v)) return;
+  if (isRight(v, x.o[x.a])){
+    run.picked = x.a; inp.disabled = true; inp.classList.add('ok');
+    const pts = 500 + Math.round(500 * Math.max(0, qt - el) / qt);
+    run.answers[run.idx] = 1; run.score += pts; run.lastPts = pts;
+    $('#qExp').textContent = `정답! +${pts}점. 다른 사람들을 기다리는 중…`;
+    report({ sc: run.score, an: fillAns() }, false);
+  } else {
+    run.lock = now + 1200; inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+    $('#qExp').textContent = `땡! "${clip(v, 20)}"은(는) 아니에요. 1초 뒤 다시 입력하세요.`; inp.select();
+  }
+}
 function pickAns(k){
   if (on.state !== 'play' || run.picked != null || run.idx < 0) return;
-  const now = performance.now(), qStart = run.t0 + run.idx * (QTIME + REVEAL) * 1000, el = (now - qStart) / 1000;
+  if (run.qs[run.idx].g === 'non') return;
+  const now = performance.now(), qStart = run.t0 + run.starts[run.idx] * 1000, el = (now - qStart) / 1000;
   if (el > QTIME) return;
   run.picked = k;
   const btns = [...$('#qOpts').children]; btns.forEach((b, i) => { b.disabled = true; if (i === k) b.classList.add('pick'); });
@@ -1189,10 +1250,17 @@ const fillAns = () => Array.from({ length: run.answers.length }, (_, i) => run.a
 function reveal(i){
   run.revealed = i; const x = run.qs[i];
   if (run.answers[i] == null){ run.answers[i] = 0; run.lastPts = 0; }
-  const btns = [...$('#qOpts').children]; btns.forEach((b, k) => { b.disabled = true; if (k === x.a) b.classList.add('right'); else if (k === run.picked) b.classList.add('wrong'); });
   const exp = $('#qExp'); exp.textContent = '';
-  const head = document.createElement('b'); head.textContent = run.answers[i] ? `정답! +${run.lastPts}점 ` : (run.picked == null ? '시간 초과 ' : '오답 ');
-  exp.append(head, document.createTextNode(x.e || `정답: ${x.o[x.a]}`));
+  if (x.g === 'non'){
+    const inp = $('#sa'); if (inp){ inp.disabled = true; if (!run.answers[i]) inp.classList.add('bad'); }
+    $('#qHint').textContent = `정답: ${x.o[x.a]}`; $('#qHint').classList.add('ans');
+    const head = document.createElement('b'); head.textContent = run.answers[i] ? `정답! +${run.lastPts}점 ` : '시간 초과 ';
+    exp.append(head, document.createTextNode(x.e || ''));
+  } else {
+    const btns = [...$('#qOpts').children]; btns.forEach((b, k) => { b.disabled = true; if (k === x.a) b.classList.add('right'); else if (k === run.picked) b.classList.add('wrong'); });
+    const head = document.createElement('b'); head.textContent = run.answers[i] ? `정답! +${run.lastPts}점 ` : (run.picked == null ? '시간 초과 ' : '오답 ');
+    exp.append(head, document.createTextNode(x.e || `정답: ${x.o[x.a]}`));
+  }
   const last = i === run.qs.length - 1;
   report({ sc: run.score, an: fillAns() }, last);
   if (last){ on.state = 'done'; checkEnd(); }
@@ -1200,14 +1268,19 @@ function reveal(i){
 function loop(){
   if (on.state === 'off') return;
   if ((on.state === 'play' || on.state === 'done') && run.qs.length){
-    const t = (performance.now() - run.t0) / 1000, slot = QTIME + REVEAL;
-    const i = Math.min(run.qs.length - 1, Math.floor(t / slot)), local = t - i * slot;
+    const t = (performance.now() - run.t0) / 1000;
+    let i = 0; while (i < run.qs.length - 1 && t >= run.starts[i + 1]) i++;
+    const local = t - run.starts[i], qt = qtime(run.qs[i]);
     if (on.state === 'play'){
       if (i !== run.idx && i > run.revealed) showQ(i);
-      if (local >= QTIME && run.revealed < i) reveal(i);
+      if (run.qs[i].g === 'non' && run.idx === i && run.revealed < i && run.picked == null){
+        const stage = HINT_AT.filter(h => local >= h).length;
+        if (stage !== run.hintStage){ run.hintStage = stage; const h = $('#qHint'); if (h) h.textContent = stage ? hintText(run.qs[i].o[run.qs[i].a], stage) : h.textContent; }
+      }
+      if (local >= qt && run.revealed < i) reveal(i);
     }
-    const left = run.revealed >= run.idx ? 0 : Math.max(0, QTIME - local);
-    $('#qBar').style.width = (left / QTIME * 100) + '%';
+    const left = run.revealed >= run.idx ? 0 : Math.max(0, qt - local);
+    $('#qBar').style.width = (left / qt * 100) + '%';
     $('#hRound').textContent = on.state === 'done' ? '완료 · 결과 집계 중' : `${run.idx + 1}/${run.qs.length}번 · ${left > 0 ? left.toFixed(1) + '초' : '정답 공개'}`;
     $('#hScore').textContent = run.score + '점';
   }
@@ -1216,8 +1289,17 @@ function loop(){
 function onLobby(){ run.qs = []; run.idx = -1; $('#qNum').textContent = '대기실 맛보기'; $('#qBar').style.width = '0%'; $('#hRound').textContent = '대기'; $('#hScore').textContent = '';
   const pool = cat === 'mix' ? ALL : ALL.filter(q => q.g === cat);
   const x = shuffleQ(pool[Math.floor(rnd() * pool.length)], seeded((rnd() * 1e9) | 0));
-  $('#qCat').textContent = `${CATS[x.g]} · ${x.c}`; $('#qText').textContent = x.q; $('#qExp').textContent = '';
-  const box = $('#qOpts'); box.innerHTML = '';
+  $('#qCat').textContent = (x.c && x.c !== CATS[x.g]) ? `${CATS[x.g]} · ${x.c}` : CATS[x.g]; $('#qText').textContent = x.q; $('#qExp').textContent = '';
+  const box = $('#qOpts'); box.innerHTML = ''; box.classList.remove('subjbox');
+  if (x.g === 'non'){
+    let stage = 0; const ans = x.o[x.a];
+    const ui = subjectiveUI((v, inp) => {
+      if (isRight(v, ans)){ inp.disabled = true; inp.classList.add('ok'); $('#qExp').textContent = '정답! ' + (x.e || ''); setTimeout(() => { if (on.state === 'lobby') onLobby(); }, 3200); }
+      else { inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake'); $('#qExp').textContent = '땡! 다시 생각해 보세요.'; inp.select(); }
+    }, () => { stage = Math.min(4, stage + 1); if (stage === 4){ $('#qHint').textContent = `정답: ${ans}`; $('#qExp').textContent = x.e || ''; setTimeout(() => { if (on.state === 'lobby') onLobby(); }, 3600); } else $('#qHint').textContent = hintText(ans, stage); });
+    ui.hint.textContent = '막히면 “힌트 보기”를 눌러보세요. 경기에서는 시간이 지나면 저절로 나와요.';
+    return;
+  }
   x.o.forEach((s, k) => { const b = document.createElement('button'); b.type = 'button'; const n = document.createElement('b'); n.textContent = k + 1; const sp = document.createElement('span'); sp.textContent = s; b.append(n, sp);
     b.onclick = () => { [...box.children].forEach((bb, kk) => { bb.disabled = true; if (kk === x.a) bb.classList.add('right'); else if (kk === k) bb.classList.add('wrong'); }); $('#qExp').textContent = (k === x.a ? '정답! ' : '오답. ') + (x.e || ''); setTimeout(() => { if (on.state === 'lobby') onLobby(); }, 3800); };
     box.append(b); });
@@ -1228,7 +1310,7 @@ function resultText(r){ return `${r.sc}점 · ${r.an.filter(v => v).length}/${NQ
 function lobbyNote(){ return `${catLabel(cat)} 10문제, ${mode === 'last' ? '점수 꼴찌' : '점수 1등'} ${dutyCount}명이 당직. 기다리는 동안 맛보기 문제를 풀어보세요.`; }
 function onResultShown(){}
 function onLeave(){}
-window.addEventListener('keydown', e => { if (on.state === 'play' && /^[1-4]$/.test(e.key)) pickAns(+e.key - 1); });
+window.addEventListener('keydown', e => { if (document.activeElement && document.activeElement.tagName === 'INPUT') return; if (on.state === 'play' && /^[1-4]$/.test(e.key)) pickAns(+e.key - 1); });
 })();
 </script>
 <script>(function(){var d=document.getElementById('how');if(d&&(window.innerWidth<760||matchMedia('(pointer:coarse)').matches))d.removeAttribute('open');})();</script>

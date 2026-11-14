@@ -1,7 +1,7 @@
 /* 당직 게임 센터 서비스워커
    항상 인터넷에서 최신 파일을 먼저 받아오고(새 버전 즉시 반영),
    인터넷이 끊겼을 때만 저장해둔 화면을 보여줍니다. */
-const CACHE = 'dutygame-v1';
+const CACHE = 'dutygame-v2';
 const SHELL = ['./', 'index.html', 'race.html', 'bumper.html', 'mole.html', 'archery.html', 'timer.html', 'typing.html', 'spot.html', 'quiz.html',
   'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon.png'];
 self.addEventListener('install', e => {

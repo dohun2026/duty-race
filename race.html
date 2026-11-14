@@ -126,6 +126,7 @@ body.solo .only-solo, body.online .only-online{display:block}
 #lobby button.start:disabled{opacity:.45;cursor:default}
 #lobby .note{color:#aeb8de;font-size:12px;margin:6px 0 0;line-height:1.45}
 #lobby.min ul,#lobby.min .opt,#lobby.min .note,#lobby.min button{display:none}
+.maps button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--gold) inset}
 .cars{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .cars button{text-align:left;padding:10px 11px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--text);font:inherit;cursor:pointer}
 .cars button b{display:block;font-size:15px}
@@ -220,7 +221,17 @@ body.solo .only-solo, body.online .only-online{display:block}
         </div>
       </div>
     </div>
-    <p class="hint only-online">온라인에서는 레이스 시작 버튼을 누른 사람의 설정(바퀴 수, 당직 방식)으로 진행됩니다.</p>
+    <span class="lbl" style="margin-top:16px">코스</span>
+    <div class="cars maps" id="mapPick"></div>
+    <div class="only-online" style="margin-top:16px">
+      <span class="lbl">경기 방식</span>
+      <div class="seg" id="cmode">
+        <button type="button" data-v="race" aria-pressed="false">경쟁 · 차끼리 부딪힘</button>
+        <button type="button" data-v="ghost" aria-pressed="true">기록 · 안 부딪힘</button>
+      </div>
+      <p class="hint" id="cmodeInfo"></p>
+    </div>
+    <p class="hint only-online">온라인에서는 레이스 시작 버튼을 누른 사람의 설정(코스, 경기 방식, 바퀴 수, 당직 방식)으로 진행됩니다.</p>
     <p class="err" id="err"></p>
     <button class="go" id="start">출발</button>
     <p class="meta" id="meta"></p>
@@ -262,7 +273,7 @@ body.solo .only-solo, body.online .only-online{display:block}
     <button class="start" id="raceBtn">레이스 시작</button>
     <p class="note" id="lobbyNote">기다리는 동안 자유롭게 연습 주행할 수 있습니다.</p>
   </div>
-  <details class="" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 정해진 바퀴를 가장 빨리 도는 사람이 이겨요.</li><li><b>가속은 자동</b>이에요. 방향과 브레이크, 부스트만 조작하면 됩니다.</li><li><b>PC</b> ← → 방향, ↓ 브레이크, 스페이스 부스트</li><li><b>휴대폰</b> 화면 아래 버튼</li><li><b>금빛 링</b>을 통과하면 부스트 게이지가 차요.</li><li><b>벽에 닿으면</b> 크게 느려져요. 코너 전에 살짝 브레이크!</li><li><b>드리프트</b> 빠른 속도에서 핸들을 끝까지 꺾으면 뒤가 미끄러져요. 멋지지만 속도가 줄어드니 꼭 필요할 때만!</li><li>차끼리는 부딪히지 않아요(고스트). 순수 실력 대결입니다.</li><li>지금은 연습 주행 중이에요. 누군가 “레이스 시작”을 누르면 모두 출발선으로 갑니다.</li></ul></details>
+  <details class="" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 정해진 바퀴를 가장 빨리 도는 사람이 이겨요.</li><li><b>가속은 자동</b>이에요. 방향과 브레이크, 부스트만 조작하면 됩니다.</li><li><b>PC</b> ← → 방향, ↓ 브레이크, 스페이스 부스트</li><li><b>휴대폰</b> 화면 아래 버튼</li><li><b>금빛 링</b>을 통과하면 부스트 게이지가 차요.</li><li><b>벽에 닿으면</b> 크게 느려져요. 코너 전에 살짝 브레이크!</li><li><b>드리프트</b> 빠른 속도에서 핸들을 끝까지 꺾으면 뒤가 미끄러져요. 멋지지만 속도가 줄어드니 꼭 필요할 때만!</li><li><b>경기 방식</b> 경쟁은 차끼리 부딪히고 밀려요. 기록은 서로 통과하는 고스트라 순수 기록 대결이에요.</li><li><b>코스</b> 달빛 고가도로(기본), 노을 해안도로(고속), 도심 야경(급커브)</li><li>지금은 연습 주행 중이에요. 누군가 “레이스 시작”을 누르면 모두 출발선으로 갑니다.</li></ul></details>
   <div class="tc l">
     <button data-k="left" aria-label="왼쪽">◀</button>
     <button data-k="right" aria-label="오른쪽">▶</button>
@@ -317,7 +328,7 @@ window.createNetRoom = async function(){
     const me = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
     const base = db.ref('rooms/' + ROOM_ID + '/peers');
     const myRef = base.child(me);
-    const POS = ['x', 'z', 'y', 'h', 'p', 'b'];
+    const POS = ['x', 'z', 'y', 'h', 'p', 'b', 'v'];
     let mine = {}, others = {}, snap = Object.freeze([]), listeners = [], timer = null, lastWrite = 0;
     const build = () => {
       const all = Object.assign({}, others); all[me] = mine;
@@ -392,8 +403,9 @@ function syncSeg(){
   document.body.classList.toggle('solo', play === 'solo');
   $('#start').textContent = play === 'online' ? '대기실 입장' : '출발';
 }
+const recKey = (l, m) => (!m || m === 'night') ? 'dr3d-record-' + l : `dr3d-record-${m}-${l}`;
 function refreshMeta(){
-  const lr = load('dr3d-last'), rec = load('dr3d-record-' + laps);
+  const lr = load('dr3d-last'), rec = load(recKey(laps, load('dr3d-map')));
   const parts = [];
   if (lr) parts.push(`지난 판 당직: ${lr.who} (${lr.date})`);
   parts.push(rec ? `${laps}바퀴 트랙 기록: ${rec.name} ${rec.time.toFixed(2)}초` : `${laps}바퀴 트랙 기록 없음`);
@@ -460,33 +472,37 @@ if (!window.THREE){ $('#err').textContent = '3D 엔진을 불러오지 못했습
 
 // ---------------- 3D 월드 ----------------
 const N = 1400, ROAD_W = 16, HALF = ROAD_W / 2, GROUND_Y = -6;
-const CTRL = [[0,0,1],[160,-10,2],[280,-60,5],[330,-180,10],[260,-270,13],[140,-250,8],[90,-170,3],[20,-200,1],[-80,-280,2],[-200,-250,5],[-250,-140,10],[-200,-40,7],[-120,20,3]];
-const curve = new THREE.CatmullRomCurve3(CTRL.map(([x, z, h]) => new THREE.Vector3(x * 0.85, h, z * 0.85)), true, 'centripetal');
-const P = curve.getSpacedPoints(N).slice(0, N);
-const T = [], S = [], D = [0];
-for (let i = 0; i < N; i++){
-  const a = P[(i - 1 + N) % N], b = P[(i + 1) % N];
-  const t = new THREE.Vector3(b.x - a.x, 0, b.z - a.z).normalize();
-  T.push(t); S.push(new THREE.Vector3(-t.z, 0, t.x));
-  if (i > 0) D.push(D[i - 1] + P[i].distanceTo(P[i - 1]));
-}
-const TRACK_LEN = D[N - 1] + P[N - 1].distanceTo(P[0]);
+const MAPS = {
+  night: { name: '달빛 고가도로', desc: '기본 코스. 헤어핀 하나와 언덕', scale: 0.85,
+    pts: [[0,0,1],[160,-10,2],[280,-60,5],[330,-180,10],[260,-270,13],[140,-250,8],[90,-170,3],[20,-200,1],[-80,-280,2],[-200,-250,5],[-250,-140,10],[-200,-40,7],[-120,20,3]],
+    th: { sky: ['#050a22', '#16275e', '#3a4f96'], fog: [0x1a2a63, 140, 820], hemi: [0x9fb4ff, 0x1a2240, 0.85], dir: [0xc8d4ff, 0.7], orb: { show: true, color: 0xf6f1d6, glow: 0xb4c4ff, pos: [520, 330, -1150], size: 34 }, stars: true,
+      ground: 0x2b3a70, mtn: [0x1d2a5c, 0xd8e2ff], mtnShow: true, stone: 0x4a5588, stoneDark: 0x323b68, rail: 0xffcf73, deco: 'trees', decoColor: 0x173f45 } },
+  coast: { name: '노을 해안도로', desc: '바다 위 고속 코스. 완만한 커브, 긴 직선', scale: 0.9,
+    pts: [[0,0,3],[190,0,4],[360,-30,7],[450,-130,11],[430,-260,14],[320,-330,12],[180,-300,8],[80,-340,6],[-80,-390,5],[-250,-340,7],[-330,-210,10],[-300,-90,8],[-170,-20,5]],
+    th: { sky: ['#2e2463', '#d9685a', '#ffc98d'], fog: [0xe8a07e, 170, 950], hemi: [0xffd9bd, 0x3d6a8c, 1.05], dir: [0xffc890, 0.95], orb: { show: true, color: 0xffd27a, glow: 0xffa860, pos: [-900, 90, -900], size: 60 }, stars: false,
+      ground: 0x2a6f99, mtn: [0x6b4a72, 0x8f6d86], mtnShow: true, stone: 0xd9ccb6, stoneDark: 0xa99780, rail: 0xffffff, deco: 'rocks', decoColor: 0x6e5d54 } },
+  city: { name: '도심 야경', desc: '빌딩 숲 기술 코스. 급커브와 S자 연속', scale: 0.9,
+    pts: [[0,0,1],[120,0,1],[175,-35,2],[150,-95,3],[185,-150,4],[280,-150,6],[320,-215,8],[270,-280,8],[130,-285,6],[50,-235,4],[-30,-285,3],[-150,-280,4],[-200,-195,5],[-130,-130,4],[-195,-65,3],[-120,0,2]],
+    th: { sky: ['#04020c', '#1a0f38', '#3d2160'], fog: [0x1c1238, 110, 640], hemi: [0x9a8cff, 0x140d2a, 0.8], dir: [0xb0a0ff, 0.45], orb: { show: true, color: 0xf0e8ff, glow: 0x9a7cff, pos: [-400, 380, -1100], size: 22 }, stars: true,
+      ground: 0x17131f, mtn: [0x150f26, 0x2a2140], mtnShow: false, stone: 0x3b3552, stoneDark: 0x25203a, rail: 0x3ef0ff, deco: 'buildings', decoColor: 0x2a2638 } }
+};
+const MAP_IDS = Object.keys(MAPS);
+let P = [], T = [], S = [], D = [0], TRACK_LEN = 0, curMap = null;
+const RINGS = [];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 $('#gl').appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, 1, 0.3, 2500);
-
-(function sky(){
+function skyTex(cols){
   const c = document.createElement('canvas'); c.width = 4; c.height = 256;
   const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
-  gr.addColorStop(0, '#050a22'); gr.addColorStop(0.55, '#16275e'); gr.addColorStop(1, '#3a4f96');
-  g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
-  scene.background = new THREE.CanvasTexture(c);
-})();
+  gr.addColorStop(0, cols[0]); gr.addColorStop(0.55, cols[1]); gr.addColorStop(1, cols[2]);
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 256); return new THREE.CanvasTexture(c);
+}
 scene.fog = new THREE.Fog(0x1a2a63, 140, 820);
-scene.add(new THREE.HemisphereLight(0x9fb4ff, 0x1a2240, 0.85));
+const hemi = new THREE.HemisphereLight(0x9fb4ff, 0x1a2240, 0.85); scene.add(hemi);
 const moonLight = new THREE.DirectionalLight(0xc8d4ff, 0.7); moonLight.position.set(300, 400, -500); scene.add(moonLight);
 
 function glowTex(inner, outer){
@@ -496,52 +512,39 @@ function glowTex(inner, outer){
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
   return new THREE.CanvasTexture(c);
 }
-// 달
-const moon = new THREE.Mesh(new THREE.SphereGeometry(34, 24, 16), new THREE.MeshBasicMaterial({ color: 0xf6f1d6, fog: false }));
-moon.position.set(520, 330, -1150); scene.add(moon);
-const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('rgba(255,248,220,.9)', 'rgba(170,190,255,.25)'), fog: false, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
-moonGlow.scale.set(380, 380, 1); moonGlow.position.copy(moon.position); scene.add(moonGlow);
+// 달(해)
+const moon = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshBasicMaterial({ color: 0xf6f1d6, fog: false }));
+scene.add(moon);
+const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('rgba(255,255,255,.9)', 'rgba(255,255,255,.25)'), fog: false, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+scene.add(moonGlow);
 // 별
-(function(){
+const stars = (function(){
   const r = seeded(7), n = 1400, pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++){
     const th = r() * Math.PI * 2, ph = r() * Math.PI * 0.45, R = 1600;
     pos[i*3] = R * Math.cos(th) * Math.cos(ph); pos[i*3+1] = R * Math.sin(ph) + 40; pos[i*3+2] = R * Math.sin(th) * Math.cos(ph);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false })));
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false }));
+  scene.add(pts); return pts;
 })();
-// 땅
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: 0x2b3a70, roughness: 1 }));
+// 땅(바다)
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x2b3a70, roughness: 1 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), groundMat);
 ground.rotation.x = -Math.PI / 2; ground.position.y = GROUND_Y; scene.add(ground);
 // 산
-(function(){
-  const r = seeded(11);
-  const mMat = new THREE.MeshStandardMaterial({ color: 0x1d2a5c, roughness: 1, flatShading: true });
-  const sMat = new THREE.MeshStandardMaterial({ color: 0xd8e2ff, roughness: 1, flatShading: true });
+const mMat = new THREE.MeshStandardMaterial({ color: 0x1d2a5c, roughness: 1, flatShading: true });
+const sMat = new THREE.MeshStandardMaterial({ color: 0xd8e2ff, roughness: 1, flatShading: true });
+const mountains = (function(){
+  const grp = new THREE.Group(), r = seeded(11);
   for (let i = 0; i < 46; i++){
-    const a = r() * Math.PI * 2, d = 650 + r() * 450, h = 160 + r() * 260, rad = 120 + r() * 160;
+    const a = r() * Math.PI * 2, d = 680 + r() * 450, h = 160 + r() * 260, rad = 120 + r() * 160;
     const m = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 7), mMat);
-    m.position.set(Math.cos(a) * d, GROUND_Y + h / 2, Math.sin(a) * d); m.rotation.y = r() * 3; scene.add(m);
+    m.position.set(Math.cos(a) * d, GROUND_Y + h / 2, Math.sin(a) * d - 150); m.rotation.y = r() * 3; grp.add(m);
     const cap = new THREE.Mesh(new THREE.ConeGeometry(rad * 0.3, h * 0.3, 7), sMat);
-    cap.position.set(m.position.x, GROUND_Y + h * 0.85 + 0.5, m.position.z); cap.rotation.y = m.rotation.y; scene.add(cap);
+    cap.position.set(m.position.x, GROUND_Y + h * 0.85 + 0.5, m.position.z); cap.rotation.y = m.rotation.y; grp.add(cap);
   }
-})();
-// 나무
-(function(){
-  const r = seeded(23), count = 520;
-  const mesh = new THREE.InstancedMesh(new THREE.ConeGeometry(3.2, 11, 6), new THREE.MeshStandardMaterial({ color: 0x173f45, roughness: 1, flatShading: true }), count);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
-  let placed = 0, guard = 0;
-  while (placed < count && guard++ < 8000){
-    const x = (r() * 2 - 1) * 560, z = -120 + (r() * 2 - 1) * 380;
-    let ok = true;
-    for (let i = 0; i < N; i += 7){ const dx = P[i].x - x, dz = P[i].z - z; if (dx*dx + dz*dz < 22*22){ ok = false; break; } }
-    if (!ok) continue;
-    const s = 0.7 + r() * 0.9; sc.set(s, s, s); pos.set(x, GROUND_Y + 5.5 * s, z);
-    m.compose(pos, q, sc); mesh.setMatrixAt(placed++, m);
-  }
-  mesh.count = placed; scene.add(mesh);
+  scene.add(grp); return grp;
 })();
 
 // 도로 텍스처
@@ -571,61 +574,188 @@ function stripGeo(rowFn, uv){
 }
 const edge = (j, side, off, dy) => { const p = P[j], s = S[j], k = side * (HALF + off); return [p.x + s.x * k, p.y + dy, p.z + s.z * k]; };
 const roadMat = new THREE.MeshStandardMaterial({ map: roadTexture(), roughness: 0.85, side: THREE.DoubleSide });
-scene.add(new THREE.Mesh(stripGeo(j => [edge(j, 1, 0, 0.02), edge(j, -1, 0, 0.02)], true), roadMat));
 const stone = new THREE.MeshStandardMaterial({ color: 0x4a5588, roughness: 0.95, side: THREE.DoubleSide });
 const stoneDark = new THREE.MeshStandardMaterial({ color: 0x323b68, roughness: 1, side: THREE.DoubleSide });
 const glow = new THREE.MeshBasicMaterial({ color: 0xffcf73, side: THREE.DoubleSide });
-for (const side of [1, -1]){
-  scene.add(new THREE.Mesh(stripGeo(j => [edge(j, side, 0, 0), edge(j, side, 0, 0.75)]), stone));      // 난간
-  scene.add(new THREE.Mesh(stripGeo(j => [edge(j, side, 0, 0.75), edge(j, side, 0, 0.92)]), glow));   // 빛 라인
-  scene.add(new THREE.Mesh(stripGeo(j => [edge(j, side, 0, 0), edge(j, side, 0, -1.6)]), stoneDark));  // 상판 옆면
-}
-scene.add(new THREE.Mesh(stripGeo(j => [edge(j, 1, 0, -1.6), edge(j, -1, 0, -1.6)]), stoneDark));     // 상판 아래
-// 교각
-(function(){
-  const step = 18, list = [];
-  for (let i = 0; i < N; i += step) if (P[i].y - 1.6 - GROUND_Y > 0.5) list.push(i);
-  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), stone, list.length);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
-  list.forEach((i, k) => {
-    const h = P[i].y - 1.6 - GROUND_Y;
-    e.set(0, Math.atan2(T[i].x, T[i].z), 0); q.setFromEuler(e);
-    sc.set(ROAD_W * 0.6, h, 2.4); pos.set(P[i].x, GROUND_Y + h / 2, P[i].z);
-    m.compose(pos, q, sc); mesh.setMatrixAt(k, m);
-  });
-  scene.add(mesh);
-})();
-// 출발선 + 게이트
-(function(){
-  const c = document.createElement('canvas'); c.width = 128; c.height = 32; const g = c.getContext('2d');
-  for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++){ g.fillStyle = (x + y) % 2 ? '#111' : '#fff'; g.fillRect(x * 8, y * 8, 8, 8); }
-  const line = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W, 2.5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c) }));
-  line.rotation.x = -Math.PI / 2; line.rotation.z = -Math.atan2(T[0].x, T[0].z) + Math.PI;
-  line.position.set(P[0].x, P[0].y + 0.05, P[0].z); scene.add(line);
-  const gate = new THREE.Group(), heading = Math.atan2(T[0].x, T[0].z);
-  const post = new THREE.BoxGeometry(0.8, 9, 0.8);
-  [-1, 1].forEach(sd => { const pm = new THREE.Mesh(post, stone); pm.position.set(sd * (HALF + 0.6), 4.5, 0); gate.add(pm); });
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(ROAD_W + 2.4, 1.2, 0.8), glow); beam.position.y = 9; gate.add(beam);
-  gate.position.set(P[0].x, P[0].y, P[0].z); gate.rotation.y = heading; scene.add(gate);
-})();
+const checkerTex = (function(){ const c = document.createElement('canvas'); c.width = 128; c.height = 32; const g = c.getContext('2d');
+  for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++){ g.fillStyle = (x + y) % 2 ? '#111' : '#fff'; g.fillRect(x * 8, y * 8, 8, 8); } return new THREE.CanvasTexture(c); })();
+const windowTex = (function(){ const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d'), r = seeded(41);
+  g.fillStyle = '#0d0b16'; g.fillRect(0, 0, 64, 128);
+  for (let y = 4; y < 124; y += 8) for (let x = 4; x < 60; x += 8){ const v = r(); if (v < 0.38){ g.fillStyle = v < 0.06 ? '#7ff6ff' : v < 0.12 ? '#ff8fd8' : '#ffd98a'; g.fillRect(x, y, 4, 5); } }
+  return new THREE.CanvasTexture(c); })();
 
-// 링 (모든 참가자 동일 배치)
-const RINGS = [];
-(function(){
-  const r = seeded(99), n = 16, span = Math.floor((N - 90) / n);
-  const tor = new THREE.TorusGeometry(2.7, 0.22, 10, 36), halo = new THREE.TorusGeometry(2.7, 0.6, 8, 36);
-  for (let k = 0; k < n; k++){
-    const i = 70 + k * span, lat = (r() * 2 - 1) * 5;
-    const p = P[i], s = S[i];
-    const g = new THREE.Group();
-    const mat = new THREE.MeshBasicMaterial({ color: 0xffe7a0, transparent: true, opacity: 0.95 });
-    const hmat = new THREE.MeshBasicMaterial({ color: 0xffc04a, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
-    g.add(new THREE.Mesh(tor, mat)); g.add(new THREE.Mesh(halo, hmat));
-    g.position.set(p.x + s.x * lat, p.y + 2.6, p.z + s.z * lat);
-    g.lookAt(g.position.x + T[i].x, g.position.y, g.position.z + T[i].z);
-    scene.add(g);
-    RINGS.push({ i, lat, g, mat, hmat, next: i, flash: 0, dim: 0 });
+let trackGroup = null, decoGroup = null;
+function disposeGroup(gp){ if (!gp) return; scene.remove(gp); gp.traverse(o => { if (o.geometry && !o.userData.shared) o.geometry.dispose(); }); }
+function buildTrack(id){
+  if (!MAPS[id]) id = 'night';
+  if (curMap === id) return;
+  curMap = id;
+  const M = MAPS[id], th = M.th;
+  disposeGroup(trackGroup); disposeGroup(decoGroup);
+  // 중심선
+  const curve = new THREE.CatmullRomCurve3(M.pts.map(([x, z, h]) => new THREE.Vector3(x * M.scale, h, z * M.scale)), true, 'centripetal');
+  P = curve.getSpacedPoints(N).slice(0, N); T = []; S = []; D = [0];
+  for (let i = 0; i < N; i++){
+    const a = P[(i - 1 + N) % N], b = P[(i + 1) % N];
+    const t = new THREE.Vector3(b.x - a.x, 0, b.z - a.z).normalize();
+    T.push(t); S.push(new THREE.Vector3(-t.z, 0, t.x));
+    if (i > 0) D.push(D[i - 1] + P[i].distanceTo(P[i - 1]));
   }
+  TRACK_LEN = D[N - 1] + P[N - 1].distanceTo(P[0]);
+  // 테마
+  scene.background = skyTex(th.sky);
+  scene.fog.color.setHex(th.fog[0]); scene.fog.near = th.fog[1]; scene.fog.far = th.fog[2];
+  hemi.color.setHex(th.hemi[0]); hemi.groundColor.setHex(th.hemi[1]); hemi.intensity = th.hemi[2];
+  moonLight.color.setHex(th.dir[0]); moonLight.intensity = th.dir[1];
+  moon.visible = moonGlow.visible = th.orb.show;
+  moon.material.color.setHex(th.orb.color); moon.scale.setScalar(th.orb.size); moon.position.set(...th.orb.pos);
+  moonGlow.material.color.setHex(th.orb.glow); moonGlow.scale.set(th.orb.size * 11, th.orb.size * 11, 1); moonGlow.position.copy(moon.position);
+  stars.visible = th.stars; mountains.visible = th.mtnShow;
+  groundMat.color.setHex(th.ground); groundMat.roughness = id === 'coast' ? 0.35 : 1; groundMat.metalness = id === 'coast' ? 0.25 : 0;
+  mMat.color.setHex(th.mtn[0]); sMat.color.setHex(th.mtn[1]);
+  stone.color.setHex(th.stone); stoneDark.color.setHex(th.stoneDark); glow.color.setHex(th.rail);
+  // 도로
+  const tg = trackGroup = new THREE.Group(); scene.add(tg);
+  tg.add(new THREE.Mesh(stripGeo(j => [edge(j, 1, 0, 0.02), edge(j, -1, 0, 0.02)], true), roadMat));
+  for (const side of [1, -1]){
+    tg.add(new THREE.Mesh(stripGeo(j => [edge(j, side, 0, 0), edge(j, side, 0, 0.75)]), stone));
+    tg.add(new THREE.Mesh(stripGeo(j => [edge(j, side, 0, 0.75), edge(j, side, 0, 0.92)]), glow));
+    tg.add(new THREE.Mesh(stripGeo(j => [edge(j, side, 0, 0), edge(j, side, 0, -1.6)]), stoneDark));
+  }
+  tg.add(new THREE.Mesh(stripGeo(j => [edge(j, 1, 0, -1.6), edge(j, -1, 0, -1.6)]), stoneDark));
+  // 교각
+  (function(){
+    const step = 18, list = [];
+    for (let i = 0; i < N; i += step) if (P[i].y - 1.6 - GROUND_Y > 0.5) list.push(i);
+    const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), stone, list.length);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
+    list.forEach((i, k) => {
+      const h = P[i].y - 1.6 - GROUND_Y;
+      e.set(0, Math.atan2(T[i].x, T[i].z), 0); q.setFromEuler(e);
+      sc.set(ROAD_W * 0.6, h, 2.4); pos.set(P[i].x, GROUND_Y + h / 2, P[i].z);
+      m.compose(pos, q, sc); mesh.setMatrixAt(k, m);
+    });
+    tg.add(mesh);
+  })();
+  // 출발선 + 게이트
+  (function(){
+    const line = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W, 2.5), new THREE.MeshBasicMaterial({ map: checkerTex }));
+    line.rotation.x = -Math.PI / 2; line.rotation.z = -Math.atan2(T[0].x, T[0].z) + Math.PI;
+    line.position.set(P[0].x, P[0].y + 0.05, P[0].z); tg.add(line);
+    const gate = new THREE.Group(), heading = Math.atan2(T[0].x, T[0].z);
+    const post = new THREE.BoxGeometry(0.8, 9, 0.8);
+    [-1, 1].forEach(sd => { const pm = new THREE.Mesh(post, stone); pm.position.set(sd * (HALF + 0.6), 4.5, 0); gate.add(pm); });
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(ROAD_W + 2.4, 1.2, 0.8), glow); beam.position.y = 9; gate.add(beam);
+    gate.position.set(P[0].x, P[0].y, P[0].z); gate.rotation.y = heading; tg.add(gate);
+  })();
+  // 링 (같은 코스면 모든 참가자 동일 배치)
+  RINGS.length = 0;
+  (function(){
+    const r = seeded(99 + MAP_IDS.indexOf(id) * 1000), n = 16, span = Math.floor((N - 90) / n);
+    const tor = new THREE.TorusGeometry(2.7, 0.22, 10, 36), halo = new THREE.TorusGeometry(2.7, 0.6, 8, 36);
+    for (let k = 0; k < n; k++){
+      const i = 70 + k * span, lat = (r() * 2 - 1) * 5;
+      const p = P[i], s = S[i];
+      const g = new THREE.Group();
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffe7a0, transparent: true, opacity: 0.95 });
+      const hmat = new THREE.MeshBasicMaterial({ color: 0xffc04a, transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false });
+      g.add(new THREE.Mesh(tor, mat)); g.add(new THREE.Mesh(halo, hmat));
+      g.position.set(p.x + s.x * lat, p.y + 2.6, p.z + s.z * lat);
+      g.lookAt(g.position.x + T[i].x, g.position.y, g.position.z + T[i].z);
+      tg.add(g);
+      RINGS.push({ i, lat, g, mat, hmat, next: i, flash: 0, dim: 0 });
+    }
+  })();
+  // 주변 장식
+  const dg = decoGroup = new THREE.Group(); scene.add(dg);
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  P.forEach(p => { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); });
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, hx = (x1 - x0) / 2 + 220, hz = (z1 - z0) / 2 + 220;
+  const clear = (x, z, d) => { for (let i = 0; i < N; i += 7){ const dx = P[i].x - x, dz = P[i].z - z; if (dx*dx + dz*dz < d*d) return false; } return true; };
+  const r = seeded(23 + MAP_IDS.indexOf(id) * 77);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
+  if (th.deco === 'trees'){
+    const count = 520, mesh = new THREE.InstancedMesh(new THREE.ConeGeometry(3.2, 11, 6), new THREE.MeshStandardMaterial({ color: th.decoColor, roughness: 1, flatShading: true }), count);
+    let placed = 0, guard = 0;
+    while (placed < count && guard++ < 9000){
+      const x = cx + (r() * 2 - 1) * hx, z = cz + (r() * 2 - 1) * hz;
+      if (!clear(x, z, 22)) continue;
+      const s = 0.7 + r() * 0.9; sc.set(s, s, s); pos.set(x, GROUND_Y + 5.5 * s, z); q.identity();
+      m4.compose(pos, q, sc); mesh.setMatrixAt(placed++, m4);
+    }
+    mesh.count = placed; dg.add(mesh);
+  } else if (th.deco === 'rocks'){
+    const count = 160, mesh = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: th.decoColor, roughness: 1, flatShading: true }), count);
+    let placed = 0, guard = 0;
+    while (placed < count && guard++ < 6000){
+      const x = cx + (r() * 2 - 1) * hx, z = cz + (r() * 2 - 1) * hz;
+      if (!clear(x, z, 26)) continue;
+      const s = 3 + r() * 12; e.set(r() * 3, r() * 3, r() * 3); q.setFromEuler(e); sc.set(s * (0.8 + r() * 0.6), s * (0.5 + r() * 0.5), s * (0.8 + r() * 0.6)); pos.set(x, GROUND_Y + s * 0.15, z);
+      m4.compose(pos, q, sc); mesh.setMatrixAt(placed++, m4);
+    }
+    mesh.count = placed; dg.add(mesh);
+    // 해안 야자수 대신 등대 몇 개
+    const lh = new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.6 }), lr = new THREE.MeshStandardMaterial({ color: 0xd8432f, roughness: 0.6 }), lt = new THREE.MeshBasicMaterial({ color: 0xfff1b0 });
+    for (let k = 0; k < 4; k++){
+      let x, z, g2 = 0; do { x = cx + (r() * 2 - 1) * (hx - 60); z = cz + (r() * 2 - 1) * (hz - 60); } while (!clear(x, z, 40) && g2++ < 200);
+      const t = new THREE.Group(); t.position.set(x, GROUND_Y, z);
+      const b1 = new THREE.Mesh(new THREE.CylinderGeometry(3, 4.2, 26, 12), lh); b1.position.y = 13; t.add(b1);
+      const b2 = new THREE.Mesh(new THREE.CylinderGeometry(3.05, 3.4, 6, 12), lr); b2.position.y = 18; t.add(b2);
+      const top = new THREE.Mesh(new THREE.SphereGeometry(2.4, 12, 8), lt); top.position.y = 28; t.add(top);
+      dg.add(t);
+    }
+  } else if (th.deco === 'buildings'){
+    const count = 300, mat = new THREE.MeshStandardMaterial({ color: 0x3a3650, map: windowTex, emissive: 0xffffff, emissiveMap: windowTex, emissiveIntensity: 0.85, roughness: 0.8 });
+    const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, count);
+    let placed = 0, guard = 0;
+    while (placed < count && guard++ < 9000){
+      const x = cx + (r() * 2 - 1) * hx, z = cz + (r() * 2 - 1) * hz;
+      if (!clear(x, z, 28)) continue;
+      const w = 14 + r() * 22, d = 14 + r() * 22, h = 18 + Math.pow(r(), 1.6) * 110;
+      e.set(0, r() < 0.5 ? 0 : Math.PI / 2, 0); q.setFromEuler(e); sc.set(w, h, d); pos.set(x, GROUND_Y + h / 2, z);
+      m4.compose(pos, q, sc); mesh.setMatrixAt(placed++, m4);
+    }
+    mesh.count = placed; dg.add(mesh);
+    // 옥상 경고등
+    const blink = new THREE.MeshBasicMaterial({ color: 0xff3048 });
+    const tops = new THREE.InstancedMesh(new THREE.SphereGeometry(0.9, 8, 6), blink, placed);
+    for (let i = 0; i < placed; i++){ mesh.getMatrixAt(i, m4); m4.decompose(pos, q, sc); pos.y = GROUND_Y + sc.y + 0.8; m4.compose(pos, new THREE.Quaternion(), new THREE.Vector3(1, 1, 1)); tops.setMatrixAt(i, m4); }
+    dg.add(tops);
+  }
+  buildMiniBase();
+  try{ clearSkids(); }catch(e){}
+}
+
+// 미니맵
+const mini = $('#mini'), mctx = mini.getContext('2d');
+const mapBase = document.createElement('canvas'); mapBase.width = mapBase.height = 220;
+let mapTf = (x, z) => [110, 110];
+function buildMiniBase(){
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  P.forEach(p => { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); });
+  const sc = 180 / Math.max(x1 - x0, z1 - z0), ox = 110 - (x0 + x1) / 2 * sc, oz = 110 - (z0 + z1) / 2 * sc;
+  mapTf = (x, z) => [ox + x * sc, oz + z * sc];
+  const g = mapBase.getContext('2d'); g.clearRect(0, 0, 220, 220);
+  g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(255,255,255,.85)'; g.beginPath();
+  P.forEach((p, i) => { const [a, b] = mapTf(p.x, p.z); i ? g.lineTo(a, b) : g.moveTo(a, b); }); g.closePath(); g.stroke();
+  g.lineWidth = 5; g.strokeStyle = '#3a4473'; g.stroke();
+  const [sx, sz] = mapTf(P[0].x, P[0].z); g.fillStyle = '#ffcf73'; g.fillRect(sx - 4, sz - 4, 8, 8);
+}
+buildTrack(load('dr3d-map') || 'night');
+let selMap = curMap, cmode = load('dr3d-cmode') === 'race' ? 'race' : 'ghost';
+(function(){
+  const box = $('#mapPick');
+  MAP_IDS.forEach(k => {
+    const m = MAPS[k], b = document.createElement('button'); b.type = 'button'; b.dataset.v = k;
+    const n = document.createElement('b'); n.textContent = m.name; const d = document.createElement('span'); d.textContent = m.desc;
+    b.append(n, d); b.setAttribute('aria-pressed', k === selMap);
+    b.onclick = () => { selMap = k; store('dr3d-map', k); box.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.v === k)); refreshMeta(); };
+    box.append(b);
+  });
+  const syncC = () => { document.querySelectorAll('#cmode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === cmode));
+    $('#cmodeInfo').textContent = cmode === 'race' ? '실제 레이싱처럼 차끼리 부딪히고 밀립니다. 출발 위치는 2열로 나란히 섭니다.' : '차끼리 통과합니다(고스트). 모두 같은 출발선에서 순수 기록으로 겨룹니다.'; };
+  $('#cmode').onclick = e => { const b = e.target.closest('button'); if (b){ cmode = b.dataset.v; store('dr3d-cmode', cmode); syncC(); } };
+  syncC();
 })();
 
 // 차량 (자체 디자인 쿠페)
@@ -787,21 +917,6 @@ function rearWheels(x, z, h, ud){
   return [[x + lx * ch + lz * sh, z - lx * sh + lz * ch], [x - lx * ch + lz * sh, z + lx * sh + lz * ch]];
 }
 
-// 미니맵
-const mini = $('#mini'), mctx = mini.getContext('2d');
-const mapBase = document.createElement('canvas'); mapBase.width = mapBase.height = 220;
-let mapTf;
-(function(){
-  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-  P.forEach(p => { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); });
-  const sc = 180 / Math.max(x1 - x0, z1 - z0), ox = 110 - (x0 + x1) / 2 * sc, oz = 110 - (z0 + z1) / 2 * sc;
-  mapTf = (x, z) => [ox + x * sc, oz + z * sc];
-  const g = mapBase.getContext('2d');
-  g.lineJoin = 'round'; g.lineWidth = 9; g.strokeStyle = 'rgba(255,255,255,.85)'; g.beginPath();
-  P.forEach((p, i) => { const [a, b] = mapTf(p.x, p.z); i ? g.lineTo(a, b) : g.moveTo(a, b); }); g.closePath(); g.stroke();
-  g.lineWidth = 5; g.strokeStyle = '#3a4473'; g.stroke();
-  const [sx, sz] = mapTf(P[0].x, P[0].z); g.fillStyle = '#ffcf73'; g.fillRect(sx - 4, sz - 4, 8, 8);
-})();
 function drawMini(c, others){
   mctx.clearRect(0, 0, 220, 220); mctx.drawImage(mapBase, 0, 0);
   RINGS.forEach(r => { if (r.dim > 0) return; const [a, b] = mapTf(r.g.position.x, r.g.position.z); mctx.fillStyle = '#ffe7a0'; mctx.fillRect(a - 2, b - 2, 4, 4); });
@@ -837,10 +952,12 @@ function enterGameScreen(){
   resize();
   cancelAnimationFrame(raf); prevTs = 0; raf = requestAnimationFrame(frame);
 }
-function newCar(name, color, type){
+function newCar(name, color, type, slot){
   type = validType(type);
-  const h0 = Math.atan2(T[0].x, T[0].z), i0 = N - 6;
-  car = { name, color, type, spec: CAR_TYPES[type], x: P[i0].x, z: P[i0].z, y: P[i0].y, h: h0, vh: h0, grip: 9, slip: 0, drift: false, skidD: 0, v: 0, st: 0, idx: i0, prog: -6, lap: 0, meter: 30, rings: 0, scrape: false, scrapes: 0, lat: 0 };
+  const grid = Number.isInteger(slot) && slot >= 0; if (!grid) slot = 0;
+  const row = Math.floor(slot / 2), back = 6 + row * 9, lat = grid ? (slot % 2 ? -3.6 : 3.6) : 0;
+  const h0 = Math.atan2(T[0].x, T[0].z), i0 = N - back;
+  car = { name, color, type, spec: CAR_TYPES[type], x: P[i0].x + S[i0].x * lat, z: P[i0].z + S[i0].z * lat, y: P[i0].y, h: h0, vh: h0, grip: 9, slip: 0, drift: false, skidD: 0, v: 0, st: 0, idx: i0, prog: -back, lap: 0, meter: 30, rings: 0, scrape: false, scrapes: 0, lat: 0 };
   setLocalCar(type, color); carObj.visible = true; clearSkids();
   RINGS.forEach(r => { r.next = r.i; r.dim = 0; r.flash = 0; });
   sess.t = 0; snapCamera(car);
@@ -857,6 +974,34 @@ function countdown(onGo){
 }
 const isPractice = () => play === 'online' && on.state === 'lobby';
 
+const MASS = { sedan: 1, hatch: 0.9, suv: 1.2, sports: 0.95, pickup: 1.25 }, CR = 1.12, COFF = 1.15, hitCd = new Map();
+function predict(r){ const dtp = Math.min(0.25, (performance.now() - (r.tAt || 0)) / 1000); r.qx = r.tx + Math.sin(r.th) * (r.v || 0) * dtp; r.qz = r.tz + Math.cos(r.th) * (r.v || 0) * dtp; }
+function collideCars(c){
+  const now = performance.now();
+  on.remotes.forEach((r, k) => {
+    if (r.f != null || r.tx == null) return;
+    predict(r);
+    const fa = [Math.sin(c.h), Math.cos(c.h)], fb = [Math.sin(r.th), Math.cos(r.th)];
+    let best = null;
+    for (const sa of [1, -1]) for (const sb of [1, -1]){
+      const ax = c.x + fa[0] * COFF * sa, az = c.z + fa[1] * COFF * sa, bx = r.qx + fb[0] * COFF * sb, bz = r.qz + fb[1] * COFF * sb;
+      const dx = ax - bx, dz = az - bz, d = Math.hypot(dx, dz);
+      if (d < CR * 2 && (!best || d < best.d)) best = { d, dx, dz, cx: (ax + bx) / 2, cz: (az + bz) / 2 };
+    }
+    if (!best) return;
+    const d = Math.max(1e-4, best.d), nx = best.dx / d, nz = best.dz / d;
+    const m1 = MASS[c.type] || 1, m2 = MASS[r.type] || 1, over = CR * 2 - d;
+    c.x += nx * over * m2 / (m1 + m2); c.z += nz * over * m2 / (m1 + m2);
+    const v1x = Math.sin(c.vh) * c.v, v1z = Math.cos(c.vh) * c.v, v2x = fb[0] * (r.v || 0), v2z = fb[1] * (r.v || 0);
+    const vrel = (v1x - v2x) * nx + (v1z - v2z) * nz;
+    if (vrel >= 0 || (hitCd.get(k) || 0) > now) return;
+    const j = -(1 + 0.45) * vrel / (1 / m1 + 1 / m2);
+    const nvx = v1x + j / m1 * nx, nvz = v1z + j / m1 * nz, sp = Math.hypot(nvx, nvz), fwd = nvx * fa[0] + nvz * fa[1];
+    if (fwd > 0.5){ c.vh = Math.atan2(nvx, nvz); c.v = sp; } else { c.vh = c.h; c.v = Math.max(0, fwd); }
+    hitCd.set(k, now + 160);
+    if (j > 3){ emit(best.cx, c.y + 0.7, best.cz, Math.min(26, j | 0), 0.7); if (j > 12) toast('쾅! 접촉'); }
+  });
+}
 const GRIP_HI = 16, GRIP_LO = 5.8, GRIP_BRAKE = 3.2, SLIP_DRAG = 0.24;
 function update(dt){
   const c = car;
@@ -902,6 +1047,7 @@ function update(dt){
     c.scrape = true;
     emit(c.x + s.x * sg * 1.1, c.y + 0.6, c.z + s.z * sg * 1.1, 2, 0.4);
   } else c.scrape = false;
+  if (play === 'online' && on.race && on.race.cm && on.state === 'run') collideCars(c);
   c.lat = Math.max(-lim, Math.min(lim, lat));
   c.y += (p.y - c.y) * Math.min(1, dt * 12);
   for (const r of RINGS){
@@ -920,8 +1066,8 @@ function update(dt){
   if (c.prog >= N * curLaps){ if (play === 'solo') soloFinish(); else onlineFinish(); }
 }
 function saveRecord(name, time){
-  const rec = load('dr3d-record-' + curLaps);
-  if (!rec || time < rec.time){ store('dr3d-record-' + curLaps, { name, time }); return true; }
+  const rec = load(recKey(curLaps, curMap));
+  if (!rec || time < rec.time){ store(recKey(curLaps, curMap), { name, time }); return true; }
   return false;
 }
 
@@ -952,7 +1098,7 @@ $('#editBtn').onclick = () => leaveGame();
 
 // ---------------- 한 명씩 (오프라인) ----------------
 function startSession(names){
-  play = 'solo'; curLaps = laps; curMode = mode; curCount = dutyCount;
+  play = 'solo'; curLaps = laps; curMode = mode; curCount = dutyCount; buildTrack(selMap);
   $('#lobby').classList.remove('show');
   enterGameScreen();
   const colors = shuffle(COLORS);
@@ -964,7 +1110,7 @@ function startSession(names){
 function prepDriver(){
   const p = sess.players[sess.idx];
   newCar(p.name, p.color, p.type); sess.state = 'ready';
-  const rec = load('dr3d-record-' + curLaps);
+  const rec = load(recKey(curLaps, curMap));
   $('#hBest').textContent = rec ? `트랙 기록 ${rec.time.toFixed(2)}` : '트랙 기록 -';
   showOv(`<p class="sm">${sess.idx + 1}번째 주자 (${sess.idx + 1}/${sess.players.length})</p><div class="big" id="ovName"></div>
     <p class="keys">${$('#game').classList.contains('touch') ? '◀ ▶ 조향 · 브레이크 · 부스트 버튼' : '← → 조향 / ↓ 브레이크 / 스페이스 부스트'}<br>링을 통과해 부스트를 모으세요. ${curLaps}바퀴 타임어택.</p>
@@ -1038,8 +1184,9 @@ function toLobby(){
   on.state = 'lobby'; on.race = null; clearRemotes(); hideOv(); $('#count').style.display = 'none';
   $('#modal').classList.remove('show');
   curLaps = laps; curMode = mode; curCount = dutyCount;
+  buildTrack(selMap);
   newCar(on.nick, on.color, on.type);
-  on.room.presence({ nick: on.nick, color: on.color, ct: on.type, st: 'lobby', rid: null, f: null }).catch(() => {});
+  on.room.presence({ nick: on.nick, color: on.color, ct: on.type, mp: curMap, st: 'lobby', rid: null, f: null, j: $('#joinNext').checked ? 1 : 0 }).catch(() => {});
   $('#lobby').classList.add('show'); renderLobby();
   toast('대기실 입장. 연습 주행해 보세요');
 }
@@ -1048,10 +1195,13 @@ function raceBusy(){
 }
 $('#raceBtn').onclick = () => {
   if (on.state !== 'lobby' || raceBusy()) return;
-  const r = { id: Date.now() * 1000 + Math.floor(rnd() * 1000), laps, mode, count: dutyCount, by: on.nick };
+  const mine = on.peers.find(p => p.sameTab);
+  const ids = cmode === 'race' ? on.peers.filter(p => { const pr = p.presence || {}; return pr.st === 'lobby' && pr.j !== 0; }).map(p => p.peer).slice(0, 16) : [];
+  const r = { id: Date.now() * 1000 + Math.floor(rnd() * 1000), laps, mode, count: dutyCount, by: on.nick, mp: curMap, cm: cmode === 'race' ? 1 : 0, ids };
   on.room.presence({ race: r }).catch(() => toast('시작 신호를 보내지 못했습니다'));
   setTimeout(onRoom, 50);
 };
+$('#joinNext').onchange = () => { if (on.room && on.state === 'lobby') on.room.presence({ j: $('#joinNext').checked ? 1 : 0 }).catch(() => {}); };
 $('#lobbyHead').onclick = () => $('#lobby').classList.toggle('min');
 
 function onRoom(){
@@ -1086,11 +1236,15 @@ function joinRace(r){
   $('#lobby').classList.remove('show'); $('#modal').classList.remove('show'); hideOv();
   clearRemotes();
   const who = String(r.by || '누군가').slice(0, 12);
+  buildTrack(MAPS[r.mp] ? r.mp : 'night');
+  hitCd.clear();
   if ($('#joinNext').checked){
-    newCar(on.nick, on.color, on.type); on.state = 'count';
+    const mine = on.peers.find(p => p.sameTab), slot = r.cm && Array.isArray(r.ids) && mine ? r.ids.indexOf(mine.peer) : -1;
+    if (r.cm) newCar(on.nick, on.color, on.type, slot >= 0 ? slot : (r.ids ? r.ids.length : 0)); else newCar(on.nick, on.color, on.type);
+    on.state = 'count';
     on.cache.set('self', { nick: on.nick, color: on.color, f: null, left: false });
     on.room.presence({ st: 'race', rid: r.id, f: null }).catch(() => {});
-    toast(`${who} 님이 레이스 시작! ${curLaps}바퀴`);
+    toast(`${who} 님이 레이스 시작! ${MAPS[curMap].name} · ${curLaps}바퀴 · ${r.cm ? '경쟁' : '기록'}`);
     countdown(() => { if (on.state === 'count'){ on.state = 'run'; sess.t = 0; } });
   } else {
     on.state = 'spec'; carObj.visible = false;
@@ -1132,7 +1286,7 @@ function syncRemotes(){
     const pr = p.presence || {};
     if (typeof pr.x !== 'number' || typeof pr.z !== 'number' || !isFinite(pr.x) || !isFinite(pr.z)) continue;
     const inRace = on.race && pr.rid === on.race.id;
-    const inLobby = !on.race && pr.st === 'lobby';
+    const inLobby = !on.race && pr.st === 'lobby' && (pr.mp || 'night') === curMap;
     if (inRace || inLobby) want.set(p.peer, pr);
   }
   on.remotes.forEach((r, k) => { if (!want.has(k)){ scene.remove(r.obj); on.remotes.delete(k); } });
@@ -1141,10 +1295,11 @@ function syncRemotes(){
     if (!r){
       const color = validColor(pr.color), nick = String(pr.nick || '?').slice(0, 12);
       const obj = makeCar(pr.ct, color, false); scene.add(obj); const tag = nameTag(nick, color); tag.position.y = 3.6; obj.add(tag);
-      r = { obj, nick, color, x: pr.x, z: pr.z, y: +pr.y || 0, h: +pr.h || 0 };
+      r = { obj, nick, color, type: validType(pr.ct), x: pr.x, z: pr.z, y: +pr.y || 0, h: +pr.h || 0 };
       on.remotes.set(k, r);
     }
-    r.tx = pr.x; r.tz = pr.z; r.ty = +pr.y || 0; r.th = +pr.h || 0; r.p = +pr.p || 0; r.f = typeof pr.f === 'number' ? pr.f : null; r.boost = !!(pr.b & 1); r.drift = !!(pr.b & 2);
+    if (r.tx !== pr.x || r.tz !== pr.z) r.tAt = performance.now();
+    r.tx = pr.x; r.tz = pr.z; r.ty = +pr.y || 0; r.th = +pr.h || 0; r.v = +pr.v || 0; r.p = +pr.p || 0; r.f = typeof pr.f === 'number' ? pr.f : null; r.boost = !!(pr.b & 1); r.drift = !!(pr.b & 2);
   });
 }
 function renderLobby(){
@@ -1164,7 +1319,7 @@ function renderLobby(){
   const busy = raceBusy();
   $('#raceBtn').disabled = busy || on.state !== 'lobby';
   $('#raceBtn').textContent = busy ? '다른 레이스 진행 중' : '레이스 시작';
-  $('#lobbyNote').textContent = `시작하면 ${laps}바퀴, ${mode === 'last' ? '가장 느린' : '가장 빠른'} ${dutyCount}명이 당직. 기다리는 동안 연습 주행할 수 있습니다.`;
+  $('#lobbyNote').textContent = `시작하면 ${MAPS[curMap].name} · ${cmode === 'race' ? '경쟁(부딪힘)' : '기록(고스트)'} · ${laps}바퀴, ${mode === 'last' ? '가장 느린' : '가장 빠른'} ${dutyCount}명이 당직. 기다리는 동안 연습 주행할 수 있습니다.`;
 }
 function liveRank(){
   const arr = [];
@@ -1202,8 +1357,9 @@ function frame(ts){
   // 다른 사람 차량
   const k10 = 1 - Math.exp(-10 * dt);
   on.remotes.forEach(r => {
-    if (Math.hypot(r.tx - r.x, r.tz - r.z) > 40){ r.x = r.tx; r.z = r.tz; r.y = r.ty; r.h = r.th; }
-    r.x += (r.tx - r.x) * k10; r.z += (r.tz - r.z) * k10; r.y += (r.ty - r.y) * k10; r.h = angLerp(r.h, r.th, k10);
+    predict(r);
+    if (Math.hypot(r.qx - r.x, r.qz - r.z) > 40){ r.x = r.qx; r.z = r.qz; r.y = r.ty; r.h = r.th; }
+    r.x += (r.qx - r.x) * k10; r.z += (r.qz - r.z) * k10; r.y += (r.ty - r.y) * k10; r.h = angLerp(r.h, r.th, k10);
     const moved = Math.hypot(r.x - (r.px == null ? r.x : r.px), r.z - (r.pz == null ? r.z : r.pz)); r.px = r.x; r.pz = r.z;
     r.obj.position.set(r.x, r.y, r.z); r.obj.rotation.y = r.h;
     const rud = r.obj.userData; rud.wheels.forEach(w => { w.w.rotation.x += moved / rud.wr; });
@@ -1246,7 +1402,7 @@ function frame(ts){
   // 위치 전송
   if (online && on.room && c && ['lobby', 'count', 'run', 'fin'].includes(on.state) && ts - on.sendT > 55){
     on.sendT = ts;
-    on.room.presence({ x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(2), h: +c.h.toFixed(3), p: c.prog, b: (c.boosting ? 1 : 0) | (c.drift ? 2 : 0) }).catch(() => {});
+    on.room.presence({ x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(2), h: +c.h.toFixed(3), v: +c.v.toFixed(1), p: c.prog, b: (c.boosting ? 1 : 0) | (c.drift ? 2 : 0) }).catch(() => {});
   }
   // HUD
   if (c){
