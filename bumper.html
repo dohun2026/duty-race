@@ -146,7 +146,23 @@ body.solo .only-solo, body.online .only-online{display:block}
 .dash{left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:min(50vw,300px);text-align:center}
 #game.touch .dash{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)}
 .bar.cd i{background:linear-gradient(90deg,#ff5fa2,#ffd1ea);box-shadow:0 0 12px #ff79b8}
+#feed{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 50px);transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:6}
+#feed div{background:rgba(10,6,28,.82);border:1px solid rgba(255,150,210,.55);border-radius:999px;padding:6px 14px;color:#fff;font-weight:900;font-size:14px;white-space:nowrap;animation:feedIn .25s ease-out}
+#feed div b{color:#ffb3e6}
+#feed div i{font-style:normal;color:#9fe0ff}
+@keyframes feedIn{from{opacity:0;transform:translateY(-8px) scale(.9)}to{opacity:1;transform:none}}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
 #warn{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);background:rgba(232,50,43,.85);color:#fff;font-weight:900;font-size:14px;padding:6px 12px;border-radius:9px;display:none;pointer-events:none;white-space:nowrap}
+
+#how{position:absolute;right:calc(env(safe-area-inset-right,0px) + 10px);top:calc(env(safe-area-inset-top,0px) + 150px);width:min(280px,62vw);max-height:56vh;overflow:auto;background:rgba(8,14,40,.84);border:1px solid rgba(255,214,120,.45);border-radius:12px;color:#fff;padding:10px 12px;display:none;font-size:13px;z-index:5}
+#lobby.show ~ #how{display:block}
+#how summary{cursor:pointer;list-style:none;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:19px;color:#ffe08a;display:flex;justify-content:space-between;align-items:center}
+#how summary::-webkit-details-marker{display:none}
+#how summary::after{content:'접기';font-family:'Gothic A1',sans-serif;font-size:12px;color:#c9d2f2}
+#how:not([open]) summary::after{content:'펼치기'}
+#how ul{list-style:none;margin:6px 0 0;padding:0}
+#how li{padding:5px 0;border-top:1px solid rgba(255,255,255,.12);line-height:1.5}
+#how li b{color:#ffd77a}
 </style>
 </head>
 <body>
@@ -212,6 +228,8 @@ body.solo .only-solo, body.online .only-online{display:block}
     <div class="bar cd"><i id="hDash"></i></div>
   </div>
   <div id="warn">무대가 줄어듭니다!</div>
+  <div id="feed"></div>
+  <div id="flash"></div>
   <div id="toast"></div>
   <div id="count"></div>
   <button id="quit">나가기</button>
@@ -222,6 +240,7 @@ body.solo .only-solo, body.online .only-online{display:block}
     <button class="start" id="raceBtn">게임 시작</button>
     <p class="note" id="lobbyNote">기다리는 동안 무대에서 연습할 수 있습니다. 떨어져도 다시 살아납니다.</p>
   </div>
+  <details class="" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 무대 밖으로 떨어지지 않고 끝까지 살아남기.</li><li>앞으로는 자동으로 가요. <b>회전, 후진, 대시</b>만 조작합니다.</li><li><b>PC</b> ← → 회전, ↓ 후진, 스페이스 대시</li><li><b>대시</b>는 2.5초마다 한 번 쓸 수 있는 순간 돌진이에요. 들이받기의 핵심!</li><li><b>무거운 차</b>(픽업, SUV)는 잘 안 밀리고, <b>가벼운 차</b>(해치백)는 날렵하지만 잘 밀려요.</li><li>20초가 지나면 <b>무대가 줄어들어요</b>. 가장자리가 빨갛게 깜빡이면 조심!</li><li>누가 누구를 떨어뜨렸는지 화면 위에 표시되고, 결과에도 기록돼요.</li><li>연습 중엔 떨어져도 다시 살아나요.</li></ul></details>
   <div class="tc l">
     <button data-k="left" aria-label="왼쪽">◀</button>
     <button data-k="right" aria-label="오른쪽">▶</button>
@@ -575,6 +594,48 @@ function updateSparks(dt){
   spGeo.attributes.position.needsUpdate = true;
 }
 
+// 충돌 충격 링
+const RING_N = 8, rings = [];
+(function(){
+  const g = new THREE.RingGeometry(0.75, 1.0, 40); g.rotateX(-Math.PI / 2);
+  for (let i = 0; i < RING_N; i++){
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    m.visible = false; scene.add(m); rings.push({ m, life: 0, max: 0.4, size: 5 });
+  }
+})();
+let ringHead = 0;
+function impactRing(x, z, power){
+  const o = rings[ringHead = (ringHead + 1) % RING_N];
+  o.m.position.set(x, 0.25, z); o.m.visible = true; o.max = o.life = 0.32 + Math.min(0.2, power / 120); o.size = 3 + Math.min(7, power / 5);
+  o.m.material.color.setHex(power > 18 ? 0xfff0a0 : 0xffc8ec);
+}
+function updateRings(dt){
+  for (const o of rings){
+    if (o.life <= 0) continue;
+    o.life -= dt; if (o.life <= 0){ o.m.visible = false; continue; }
+    const u = 1 - o.life / o.max, sc = 0.6 + u * o.size; o.m.scale.set(sc, 1, sc); o.m.material.opacity = 0.9 * (1 - u);
+  }
+}
+// 찌그러졌다 펴지는 연출
+function squash(holder, nx, nz, h, power){
+  const fx = Math.sin(h), fz = Math.cos(h), along = Math.abs(nx * fx + nz * fz);
+  holder.sq = { t: 0, amt: Math.min(0.32, 0.06 + power / 110), axis: along > 0.6 ? 'z' : 'x' };
+}
+function applySquash(holder, body, dt){
+  const q = holder.sq; if (!q){ return; }
+  q.t += dt; const v = q.amt * Math.exp(-9 * q.t) * Math.cos(26 * q.t);
+  if (q.t > 0.6){ body.scale.set(1, 1, 1); holder.sq = null; return; }
+  if (q.axis === 'z') body.scale.set(1 + v * 0.6, 1 + v * 0.3, 1 - v); else body.scale.set(1 - v, 1 + v * 0.3, 1 + v * 0.6);
+}
+// 탈락 알림
+function addFeed(victim, killer){
+  const box = $('#feed'), d = document.createElement('div');
+  if (killer){ const k = document.createElement('i'); k.textContent = killer; const v = document.createElement('b'); v.textContent = victim; d.append(k, document.createTextNode(' → '), v, document.createTextNode(' 떨어뜨림!')); }
+  else { const v = document.createElement('b'); v.textContent = victim; d.append(v, document.createTextNode(killer === null ? ' 나감' : ' 스스로 추락')); }
+  box.prepend(d); while (box.children.length > 3) box.lastChild.remove();
+  setTimeout(() => d.remove(), 5200);
+}
+
 // 미니맵
 const mctx = $('#mini').getContext('2d');
 function drawMini(others){
@@ -589,7 +650,7 @@ function drawMini(others){
 // ---------------- 상태 ----------------
 const keys = { left: false, right: false, brake: false, boost: false };
 const on = { room: null, nick: '', color: '', type: 'sedan', myPeer: null, state: 'off', race: null, lastRid: 0, peers: [], remotes: new Map(), cache: new Map(), t: 0, endAt: 0, sendT: 0, lobbyT: 0 };
-let me = null, raf = 0, prevTs = 0, shake = 0;
+let me = null, raf = 0, prevTs = 0, shake = 0, hitStop = 0, flashA = 0;
 const hitCd = new Map();
 
 function resize(){ const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
@@ -602,11 +663,11 @@ const angLerp = (a, b, t) => { const d = ((b - a + Math.PI) % (Math.PI * 2) + Ma
 function spawn(angle, rad){
   const x = Math.cos(angle) * rad, z = Math.sin(angle) * rad;
   me = { name: on.nick, color: on.color, type: on.type, spec: CAR_TYPES[on.type], x, z, y: 0, vx: 0, vz: 0, vy: 0, h: Math.atan2(-x, -z), st: 0, dashCd: 1, falling: false, out: false, outT: null };
-  setLocalCar(on.type, on.color); carObj.visible = true;
+  setLocalCar(on.type, on.color); carObj.visible = true; carObj.userData.body.scale.set(1, 1, 1);
 }
 
 function update(dt){
-  const c = me, sp = c.spec;
+  const c = me, sp = c.spec; c.clock = (c.clock || 0) + dt;
   if (c.falling){
     c.vy -= 32 * dt; c.y += c.vy * dt; c.x += c.vx * dt; c.z += c.vz * dt;
     if (c.y < -30) fallen();
@@ -641,20 +702,29 @@ function update(dt){
       c.vx += j / m1 * nx; c.vz += j / m1 * nz;
       hitCd.set(k, now + 180);
       const power = Math.abs(j);
-      if (power > 6){ sparks(c.x - nx * CAR_R, 0.8, c.z - nz * CAR_R, Math.min(30, power * 1.5 | 0), 10); shake = Math.min(1, power / 40); if (power > 14) toast('쾅!'); }
+      const cx = c.x - nx * CAR_R, cz = c.z - nz * CAR_R;
+      if (power > 3) c.lastHit = { nick: r.nick, at: c.clock };
+      if (power > 6){
+        sparks(cx, 0.8, cz, Math.min(46, power * 2.2 | 0), 9 + Math.min(8, power / 4)); shake = Math.min(1.3, power / 30);
+        impactRing(cx, cz, power); squash(c, nx, nz, c.h, power); squash(r, nx, nz, r.h, power * (m1 / m2));
+        hitStop = Math.max(hitStop, Math.min(0.11, 0.035 + power / 400));
+        if (power > 14){ toast(power > 26 ? '콰앙!!' : '쾅!'); flashA = Math.min(0.35, power / 90); }
+      }
     }
   });
   const dist = Math.hypot(c.x, c.z);
-  if (dist > arenaR + 0.4){ c.falling = true; c.vy = 2; toast(on.state === 'lobby' ? '추락! 곧 다시 살아납니다' : '추락!'); }
+  if (dist > arenaR + 0.4){ c.falling = true; c.vy = 2; c.kb = (c.lastHit && c.clock - c.lastHit.at < 4) ? c.lastHit.nick : ''; toast(on.state === 'lobby' ? '추락! 곧 다시 살아납니다' : (c.kb ? `${c.kb}에게 밀려 추락!` : '추락!')); }
 }
 function fallen(){
   if (on.state === 'lobby'){ spawn(rnd() * Math.PI * 2, ARENA_R0 * 0.4); return; }
   if (on.state === 'fight' && !me.out){
     me.out = true; me.outT = +on.t.toFixed(2); me.falling = false; carObj.visible = false;
-    const self = on.cache.get('self'); if (self) self.o = me.outT;
-    on.room.presence({ o: me.outT, fl: 0, x: null, z: null }).catch(() => {});
+    const self = on.cache.get('self'); if (self){ self.o = me.outT; self.kb = me.kb || ''; }
+    on.room.presence({ o: me.outT, kb: me.kb || '', fl: 0, x: null, z: null }).catch(() => {});
+    addFeed(on.nick, me.kb || '');
     on.state = 'out';
-    showOv(`<p class="sm">탈락</p><div class="big">${me.outT.toFixed(1)}초 생존</div><p class="keys">남은 사람들의 싸움을 관전합니다. 결과는 한 명만 남으면 나옵니다.</p>`);
+    showOv(`<p class="sm">탈락</p><div class="big">${me.outT.toFixed(1)}초 생존</div><p class="keys" id="ovKb"></p><p class="keys">남은 사람들의 싸움을 관전합니다. 결과는 한 명만 남으면 나옵니다.</p>`);
+    $('#ovKb').textContent = me.kb ? `${me.kb} 님에게 밀려 떨어졌습니다.` : '스스로 떨어졌습니다.';
     setTimeout(hideOv, 2500);
     checkEnd();
   }
@@ -687,7 +757,7 @@ function toLobby(){
   $('#modal').classList.remove('show');
   setArena(ARENA_R0);
   spawn(rnd() * Math.PI * 2, ARENA_R0 * 0.5);
-  on.room.presence({ nick: on.nick, color: on.color, ct: on.type, st: 'lobby', rid: null, o: null, j: $('#joinNext').checked ? 1 : 0 }).catch(() => {});
+  on.room.presence({ nick: on.nick, color: on.color, ct: on.type, st: 'lobby', rid: null, o: null, kb: null, j: $('#joinNext').checked ? 1 : 0 }).catch(() => {});
   $('#lobby').classList.add('show'); renderLobby();
 }
 $('#joinNext').onchange = () => { if (on.room) on.room.presence({ j: $('#joinNext').checked ? 1 : 0 }).catch(() => {}); setTimeout(renderLobby, 50); };
@@ -715,16 +785,19 @@ function onRoom(){
       if (p.sameTab) continue; const pr = p.presence || {};
       if (pr.rid === on.race.id){ present.add(p.peer);
         const prev = on.cache.get(p.peer) || {};
-        on.cache.set(p.peer, { nick: String(pr.nick || '?').slice(0, 12), color: validColor(pr.color), o: typeof pr.o === 'number' ? pr.o : (prev.o != null ? prev.o : null), d: typeof pr.d === 'number' ? pr.d : 99, left: false }); }
+        const nick = String(pr.nick || '?').slice(0, 12), o = typeof pr.o === 'number' ? pr.o : (prev.o != null ? prev.o : null);
+        const kb = typeof pr.kb === 'string' ? pr.kb.slice(0, 12) : (prev.kb || '');
+        if (prev.nick && prev.o == null && o != null){ addFeed(nick, kb); if (kb && kb === on.nick && me && !me.out) toast(`${nick} 떨어뜨림!`); }
+        on.cache.set(p.peer, { nick, color: validColor(pr.color), o, kb, d: typeof pr.d === 'number' ? pr.d : 99, left: false }); }
     }
-    on.cache.forEach((v, k) => { if (k !== 'self' && !present.has(k) && !v.left){ v.left = true; if (v.o == null) v.o = +on.t.toFixed(2); } });
+    on.cache.forEach((v, k) => { if (k !== 'self' && !present.has(k) && !v.left){ v.left = true; if (v.o == null){ v.o = +on.t.toFixed(2); v.gone = true; addFeed(v.nick, null); } } });
   }
   syncRemotes();
   if (performance.now() - on.lobbyT > 300) renderLobby();
   checkEnd();
 }
 function joinGame(r){
-  on.race = r; on.cache = new Map(); on.t = 0; on.endAt = 0; hitCd.clear();
+  on.race = r; on.cache = new Map(); on.t = 0; on.endAt = 0; hitCd.clear(); $('#feed').innerHTML = ''; hitStop = 0;
   $('#lobby').classList.remove('show'); $('#modal').classList.remove('show'); hideOv(); clearRemotes();
   const idx = r.ids.indexOf(on.myPeer);
   if (idx >= 0){
@@ -732,7 +805,7 @@ function joinGame(r){
     setArena(ARENA_R0); spawn(a, ARENA_R0 * 0.62);
     on.state = 'count';
     on.cache.set('self', { nick: on.nick, color: on.color, o: null, d: 0, left: false });
-    on.room.presence({ st: 'fight', rid: r.id, o: null }).catch(() => {});
+    on.room.presence({ st: 'fight', rid: r.id, o: null, kb: null }).catch(() => {});
     toast(`${String(r.by || '누군가').slice(0, 12)} 님이 게임 시작!`);
     const el = $('#count'); el.style.display = 'flex'; const seq = ['3', '2', '1', '박치기!']; let i = 0;
     const tick = () => { el.textContent = seq[i]; if (i === 3){ if (on.state === 'count'){ on.state = 'fight'; on.t = 0; } setTimeout(() => { el.style.display = 'none'; }, 600); return; } i++; setTimeout(tick, 750); };
@@ -761,7 +834,8 @@ function showResult(){
   const wasAlive = me && !me.out && on.state === 'fight';
   on.state = 'result'; hideOv(); $('#count').style.display = 'none'; $('#warn').style.display = 'none';
   on.room.presence({ st: 'result' }).catch(() => {});
-  const rows = [...on.cache.values()].map(r => ({ name: r.nick, color: r.color, o: r.o, d: r.d }));
+  const rows = [...on.cache.values()].map(r => ({ name: r.nick, color: r.color, o: r.o, d: r.d, kb: r.kb || '', gone: !!r.gone }));
+  const kills = n => rows.filter(x => x.kb && x.kb === n).length;
   rows.sort((a, b) => {
     if (a.o == null && b.o == null) return (a.d - b.d) || (a.name < b.name ? -1 : 1);
     if (a.o == null) return -1; if (b.o == null) return 1;
@@ -777,7 +851,12 @@ function showResult(){
     const n = document.createElement('span'); n.className = 'n'; n.textContent = (i + 1) + '위';
     const d = document.createElement('span'); d.className = 'dot'; d.style.background = r.color;
     const nm = document.createElement('span'); nm.textContent = r.name;
-    const tm = document.createElement('span'); tm.className = 'tm'; tm.textContent = r.o == null ? (i === 0 ? '최후의 생존자' : '생존') : `${r.o.toFixed(1)}초 탈락`;
+    const tm = document.createElement('span'); tm.className = 'tm'; const kn = kills(r.name), ks = kn ? ` · ${kn}명 떨어뜨림` : '';
+    let how = '';
+    if (r.o == null) how = (i === 0 ? '최후의 생존자' : '생존');
+    else if (r.gone) how = `${r.o.toFixed(1)}초 나감`;
+    else how = `${r.o.toFixed(1)}초 탈락 · ${r.kb ? r.kb + '에게 밀림' : '스스로 추락'}`;
+    tm.textContent = how + ks;
     li.append(n, d, nm, tm);
     if (dutySet.has(r)){ const tg = document.createElement('span'); tg.className = 'tag'; tg.textContent = '당직'; li.append(tg); }
     list.append(li);
@@ -849,7 +928,10 @@ function frame(ts){
     $('#warn').style.display = (st === 'fight' && on.t > SHRINK_START - 3 && on.t < SHRINK_END) ? 'block' : 'none';
     rimMat.color.set(on.t > SHRINK_START - 3 && st !== 'result' ? ((ts / 250 | 0) % 2 ? 0xff4d4d : 0xffb3e6) : 0xffb3e6);
   } else rimMat.color.set(0xffb3e6);
-  if (me && (st === 'lobby' || st === 'fight')){ let r = dt; while (r > 0){ const d = Math.min(r, 1/120); update(d); r -= d; } }
+  if (hitStop > 0) hitStop -= dt;
+  else if (me && (st === 'lobby' || st === 'fight')){ let r = dt; while (r > 0 && hitStop <= 0){ const d = Math.min(r, 1/120); update(d); r -= d; } }
+  if (flashA > 0){ flashA = Math.max(0, flashA - dt * 1.8); } $('#flash').style.opacity = flashA.toFixed(3);
+  updateRings(dt);
   // 상대 차
   const k = 1 - Math.exp(-12 * dt);
   on.remotes.forEach(r => {
@@ -857,11 +939,12 @@ function frame(ts){
     if (Math.hypot(r.tx - r.x, r.tz - r.z) > 12){ r.x = r.tx; r.z = r.tz; }
     r.x += (r.tx - r.x) * k; r.z += (r.tz - r.z) * k; r.y += (r.ty - r.y) * k; r.h = angLerp(r.h, r.th, k);
     r.obj.position.set(r.x, r.y, r.z); r.obj.rotation.y = r.h;
+    applySquash(r, r.obj.userData.body, dt);
   });
   // 내 차
   if (me && carObj.visible){
     carObj.position.set(me.x, me.y, me.z); carObj.rotation.y = me.h;
-    carObj.userData.body.rotation.z = me.st * 0.06;
+    carObj.userData.body.rotation.z = me.st * 0.06; applySquash(me, carObj.userData.body, dt);
     if (me.falling) carObj.rotation.x += dt * 2;
     else carObj.rotation.x = 0;
   }
@@ -914,5 +997,6 @@ window.addEventListener('keyup', e => { if (KEYMAP[e.key]) setKey(KEYMAP[e.key],
 window.addEventListener('blur', () => Object.keys(keys).forEach(k => setKey(k, false)));
 })();
 </script>
+<script>(function(){var d=document.getElementById('how');if(d&&(window.innerWidth<760||matchMedia('(pointer:coarse)').matches))d.removeAttribute('open');})();</script>
 </body>
 </html>

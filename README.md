@@ -4,7 +4,15 @@
 
 ## 파일 구성
 
-- `index.html`: 게임 전체(이 파일 하나만 GitHub에 올리면 됩니다)
+- `index.html`: 게임 목록(첫 화면)
+- `race.html`: 당직 레이스 3D
+- `bumper.html`: 범퍼카 아레나
+- `archery.html`: 바람의 양궁
+- `spot.html`: 틀린그림찾기
+- `mole.html`: 두더지 잡기
+- `timer.html`: 10초 맞추기
+- `quiz.html`: 퀴즈 센터 (건축안전·상식·역사·넌센스)
+(세 파일을 모두 저장소에 올리면 됩니다)
 - `database.rules.json`: Firebase 보안 규칙(Firebase 콘솔에 붙여넣기용)
 
 ## 1. Firebase 준비 (실시간 통신, 무료)

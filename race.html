@@ -141,6 +141,16 @@ body.solo .only-solo, body.online .only-online{display:block}
 .back{display:inline-block;margin:0 0 10px;color:var(--muted);text-decoration:none;font-weight:700;font-size:14px}
 .back:hover{color:var(--text)}
 #netmsg{font-size:13px;margin:10px 0 0;color:var(--muted)}
+
+#how{position:absolute;right:calc(env(safe-area-inset-right,0px) + 10px);top:calc(env(safe-area-inset-top,0px) + 150px);width:min(280px,62vw);max-height:56vh;overflow:auto;background:rgba(8,14,40,.84);border:1px solid rgba(255,214,120,.45);border-radius:12px;color:#fff;padding:10px 12px;display:none;font-size:13px;z-index:5}
+#lobby.show ~ #how{display:block}
+#how summary{cursor:pointer;list-style:none;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:19px;color:#ffe08a;display:flex;justify-content:space-between;align-items:center}
+#how summary::-webkit-details-marker{display:none}
+#how summary::after{content:'접기';font-family:'Gothic A1',sans-serif;font-size:12px;color:#c9d2f2}
+#how:not([open]) summary::after{content:'펼치기'}
+#how ul{list-style:none;margin:6px 0 0;padding:0}
+#how li{padding:5px 0;border-top:1px solid rgba(255,255,255,.12);line-height:1.5}
+#how li b{color:#ffd77a}
 </style>
 </head>
 <body class="online">
@@ -243,6 +253,7 @@ body.solo .only-solo, body.online .only-online{display:block}
     <button class="start" id="raceBtn">레이스 시작</button>
     <p class="note" id="lobbyNote">기다리는 동안 자유롭게 연습 주행할 수 있습니다.</p>
   </div>
+  <details class="" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 정해진 바퀴를 가장 빨리 도는 사람이 이겨요.</li><li><b>가속은 자동</b>이에요. 방향과 브레이크, 부스트만 조작하면 됩니다.</li><li><b>PC</b> ← → 방향, ↓ 브레이크, 스페이스 부스트</li><li><b>휴대폰</b> 화면 아래 버튼</li><li><b>금빛 링</b>을 통과하면 부스트 게이지가 차요.</li><li><b>벽에 닿으면</b> 크게 느려져요. 코너 전에 살짝 브레이크!</li><li><b>드리프트</b> 빠른 속도에서 핸들을 끝까지 꺾으면 뒤가 미끄러져요. 멋지지만 속도가 줄어드니 꼭 필요할 때만!</li><li>차끼리는 부딪히지 않아요(고스트). 순수 실력 대결입니다.</li><li>지금은 연습 주행 중이에요. 누군가 “레이스 시작”을 누르면 모두 출발선으로 갑니다.</li></ul></details>
   <div class="tc l">
     <button data-k="left" aria-label="왼쪽">◀</button>
     <button data-k="right" aria-label="오른쪽">▶</button>
@@ -342,7 +353,7 @@ const CAR_TYPES = {
   sedan:  { name: '세단',     desc: '모든 능력이 고른 기본형',          vmax: 56,   acc: 21, steer: 1.00, scrape: 0.80, ring: 26, drain: 30, stats: [3, 3, 3] },
   hatch:  { name: '해치백',   desc: '가속과 코너링이 날렵함',           vmax: 54.3, acc: 25, steer: 1.12, scrape: 0.80, ring: 26, drain: 30, stats: [2, 5, 5] },
   suv:    { name: 'SUV',      desc: '벽에 부딪혀도 덜 느려짐',          vmax: 55.9, acc: 20, steer: 0.96, scrape: 0.92, ring: 26, drain: 30, stats: [2, 2, 3] },
-  sports: { name: '스포츠카', desc: '최고속도 1위, 대신 벽에 약함',     vmax: 58.4,   acc: 22, steer: 0.90, scrape: 0.70, ring: 26, drain: 30, stats: [5, 3, 2] },
+  sports: { name: '스포츠카', desc: '최고속도 1위, 대신 벽에 약함',     vmax: 59.2,   acc: 22, steer: 0.90, scrape: 0.70, ring: 26, drain: 30, stats: [5, 3, 2] },
   pickup: { name: '픽업트럭', desc: '링 하나로 부스트가 많이 참',       vmax: 54.5, acc: 20, steer: 0.97, scrape: 0.85, ring: 30, drain: 27, stats: [2, 2, 3] }
 };
 const STAT_NAMES = ['최고속도', '가속', '핸들링'];
@@ -648,14 +659,22 @@ function makeCar(type, color, withLight){
     add(B(2.15, 0.42, 0.1), paint, 0, 1.29, -2.42); add(B(1.95, 0.05, 2.3), dark, 0, 1.1, -1.3);
   }
   const wg = new THREE.CylinderGeometry(wr, wr, 0.36, 14); wg.rotateZ(Math.PI / 2);
-  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([sx, sz]) => add(wg, dark, sx * (W / 2 + 0.02), wr, sz * L * 0.32));
-  const hl = new THREE.MeshBasicMaterial({ color: 0xfff4cf }), tl = new THREE.MeshBasicMaterial({ color: 0xff2a3a });
+  const rim = new THREE.MeshStandardMaterial({ color: 0xc4c8d4, roughness: 0.35, metalness: 0.7 });
+  const wheels = [];
+  [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([sx, sz]) => {
+    const pivot = new THREE.Group(); pivot.position.set(sx * (W / 2 + 0.02), wr, sz * L * 0.32); car.add(pivot);
+    const w = new THREE.Mesh(wg, dark); pivot.add(w);
+    w.add(new THREE.Mesh(B(0.4, wr * 1.45, 0.13), rim)); w.add(new THREE.Mesh(B(0.4, 0.13, wr * 1.45), rim));
+    wheels.push({ pivot, w, front: sz > 0 });
+  });
+  const hl = new THREE.MeshBasicMaterial({ color: 0xfff4cf }), tl = new THREE.MeshBasicMaterial({ color: 0x9a1826 });
   [-1, 1].forEach(sx => { add(B(0.5, 0.2, 0.08), hl, sx * W * 0.31, hlY, L / 2 + 0.01); add(B(0.55, 0.18, 0.08), tl, sx * W * 0.33, hlY + 0.07, -L / 2 - 0.01); });
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(W + 0.7, L + 0.6), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.05; car.add(shadow);
   if (withLight){ const spot = new THREE.SpotLight(0xfff0c8, 2.2, 75, 0.5, 0.6); spot.position.set(0, 1.2, L / 2);
     spot.target.position.set(0, 0, 18); car.add(spot); car.add(spot.target); }
   car.userData.body = body; car.userData.paint = paint; car.userData.type = type;
+  car.userData.wheels = wheels; car.userData.wr = wr; car.userData.tail = tl; car.userData.L = L; car.userData.W = W;
   return car;
 }
 let carObj = makeCar('sedan', '#d62828', true); scene.add(carObj);
@@ -714,6 +733,51 @@ function updateSparks(dt){
   spGeo.attributes.position.needsUpdate = true;
 }
 
+// 타이어 자국 (드리프트)
+const SKID_N = 700;
+const skidMesh = (function(){
+  const g = new THREE.PlaneGeometry(0.34, 1.05); g.rotateX(-Math.PI / 2);
+  const m = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ color: 0x08080b, transparent: true, opacity: 0.45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), SKID_N);
+  m.frustumCulled = false; scene.add(m); return m;
+})();
+let skidHead = 0;
+const _sm = new THREE.Matrix4(), _sq = new THREE.Quaternion(), _se = new THREE.Euler(), _sp = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1), _zero = new THREE.Matrix4().makeScale(0, 0, 0);
+function clearSkids(){ for (let i = 0; i < SKID_N; i++) skidMesh.setMatrixAt(i, _zero); skidMesh.instanceMatrix.needsUpdate = true; skidHead = 0; }
+clearSkids();
+function addSkid(x, y, z, heading){
+  _se.set(0, heading, 0); _sq.setFromEuler(_se); _sp.set(x, y + 0.06, z);
+  _sm.compose(_sp, _sq, _one); skidMesh.setMatrixAt(skidHead, _sm); skidHead = (skidHead + 1) % SKID_N; skidMesh.instanceMatrix.needsUpdate = true;
+}
+// 타이어 연기
+const SMOKE_N = 40, smokes = [];
+(function(){
+  const tex = glowTex('rgba(240,242,248,.95)', 'rgba(205,210,222,.4)');
+  for (let i = 0; i < SMOKE_N; i++){
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
+    sp.visible = false; scene.add(sp); smokes.push({ sp, life: 0, max: 1, vx: 0, vy: 0, vz: 0 });
+  }
+})();
+let smokeHead = 0;
+function addSmoke(x, y, z){
+  const o = smokes[smokeHead = (smokeHead + 1) % SMOKE_N];
+  o.sp.position.set(x + (rnd() - .5) * 0.5, y + 0.3, z + (rnd() - .5) * 0.5); o.sp.visible = true;
+  o.max = o.life = 0.55 + rnd() * 0.4; o.vx = (rnd() - .5) * 1.2; o.vy = 0.9 + rnd() * 0.9; o.vz = (rnd() - .5) * 1.2;
+}
+function updateSmoke(dt){
+  for (const o of smokes){
+    if (o.life <= 0) continue;
+    o.life -= dt;
+    if (o.life <= 0){ o.sp.visible = false; continue; }
+    const u = 1 - o.life / o.max;
+    o.sp.position.x += o.vx * dt; o.sp.position.y += o.vy * dt; o.sp.position.z += o.vz * dt;
+    const sc = 1.3 + u * 3.2; o.sp.scale.set(sc, sc, 1); o.sp.material.opacity = 0.42 * (1 - u);
+  }
+}
+function rearWheels(x, z, h, ud){
+  const lz = -ud.L * 0.32, lx = ud.W / 2, ch = Math.cos(h), sh = Math.sin(h);
+  return [[x + lx * ch + lz * sh, z - lx * sh + lz * ch], [x - lx * ch + lz * sh, z + lx * sh + lz * ch]];
+}
+
 // 미니맵
 const mini = $('#mini'), mctx = mini.getContext('2d');
 const mapBase = document.createElement('canvas'); mapBase.width = mapBase.height = 220;
@@ -767,8 +831,8 @@ function enterGameScreen(){
 function newCar(name, color, type){
   type = validType(type);
   const h0 = Math.atan2(T[0].x, T[0].z), i0 = N - 6;
-  car = { name, color, type, spec: CAR_TYPES[type], x: P[i0].x, z: P[i0].z, y: P[i0].y, h: h0, v: 0, st: 0, idx: i0, prog: -6, lap: 0, meter: 30, rings: 0, scrape: false, scrapes: 0, lat: 0 };
-  setLocalCar(type, color); carObj.visible = true;
+  car = { name, color, type, spec: CAR_TYPES[type], x: P[i0].x, z: P[i0].z, y: P[i0].y, h: h0, vh: h0, grip: 9, slip: 0, drift: false, skidD: 0, v: 0, st: 0, idx: i0, prog: -6, lap: 0, meter: 30, rings: 0, scrape: false, scrapes: 0, lat: 0 };
+  setLocalCar(type, color); carObj.visible = true; clearSkids();
   RINGS.forEach(r => { r.next = r.i; r.dim = 0; r.flash = 0; });
   sess.t = 0; snapCamera(car);
 }
@@ -784,6 +848,7 @@ function countdown(onGo){
 }
 const isPractice = () => play === 'online' && on.state === 'lobby';
 
+const GRIP_HI = 16, GRIP_LO = 5.8, GRIP_BRAKE = 3.2, SLIP_DRAG = 0.24;
 function update(dt){
   const c = car;
   sess.t += dt;
@@ -804,16 +869,25 @@ function update(dt){
   c.st += (st - c.st) * Math.min(1, dt * 9);
   const rate = sp.steer * c.st * (1.95 - 0.95 * Math.min(1, c.v / 84)) * Math.min(1, c.v / 8 + 0.15);
   c.h -= rate * dt;
-  c.v -= Math.abs(c.st) * c.v * 0.1 * dt;
+  // 접지력: 고속에서 핸들을 크게 꺾거나, 브레이크를 밟은 채 꺾으면 뒤가 미끄러진다(드리프트)
+  const load = Math.abs(c.st) * Math.min(1, c.v / sp.vmax);
+  let grip = GRIP_HI - (GRIP_HI - GRIP_LO) * Math.max(0, Math.min(1, (load - 0.72) / 0.28));
+  if (keys.brake && Math.abs(c.st) > 0.5 && c.v > 22) grip = Math.min(grip, GRIP_BRAKE);
+  c.grip += (grip - c.grip) * Math.min(1, dt * 7);
+  c.vh = angLerp(c.vh, c.h, 1 - Math.exp(-c.grip * dt));
+  c.slip = ((c.h - c.vh + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+  c.drift = Math.abs(c.slip) > 0.12 && c.v > 18;
+  c.v -= (Math.abs(c.st) * 0.07 + Math.abs(c.slip) * SLIP_DRAG) * c.v * dt;
   c.v = Math.max(0, c.v);
-  c.x += Math.sin(c.h) * c.v * dt; c.z += Math.cos(c.h) * c.v * dt;
+  c.x += Math.sin(c.vh) * c.v * dt; c.z += Math.cos(c.vh) * c.v * dt;
+  if (c.drift){ c.skidD += c.v * dt; if (c.skidD > 0.75){ c.skidD = 0; rearWheels(c.x, c.z, c.h, carObj.userData).forEach(([wx, wz]) => { addSkid(wx, c.y, wz, c.vh); if (rnd() < 0.5) addSmoke(wx, c.y, wz); }); } }
   const lat = (c.x - p.x) * s.x + (c.z - p.z) * s.z, lim = HALF - 1.3;
   if (Math.abs(lat) > lim){
     const sg = Math.sign(lat), over = Math.abs(lat) - lim;
     c.x -= s.x * over * sg; c.z -= s.z * over * sg;
     const th = Math.atan2(t.x, t.z);
     const fwd = Math.abs(angLerp(c.h, th, 1) - c.h) < Math.PI / 2 ? th : th + Math.PI;
-    c.h = angLerp(c.h, fwd, Math.min(1, dt * 5));
+    c.h = angLerp(c.h, fwd, Math.min(1, dt * 5)); c.vh = angLerp(c.vh, c.h, Math.min(1, dt * 10));
     c.v -= 26 * dt;
     if (!c.scrape){ c.v *= sp.scrape; c.scrapes++; toast('쾅! 벽 충돌'); }
     c.scrape = true;
@@ -1061,7 +1135,7 @@ function syncRemotes(){
       r = { obj, nick, color, x: pr.x, z: pr.z, y: +pr.y || 0, h: +pr.h || 0 };
       on.remotes.set(k, r);
     }
-    r.tx = pr.x; r.tz = pr.z; r.ty = +pr.y || 0; r.th = +pr.h || 0; r.p = +pr.p || 0; r.f = typeof pr.f === 'number' ? pr.f : null; r.boost = !!pr.b;
+    r.tx = pr.x; r.tz = pr.z; r.ty = +pr.y || 0; r.th = +pr.h || 0; r.p = +pr.p || 0; r.f = typeof pr.f === 'number' ? pr.f : null; r.boost = !!(pr.b & 1); r.drift = !!(pr.b & 2);
   });
 }
 function renderLobby(){
@@ -1115,14 +1189,17 @@ function frame(ts){
   const driving = online ? (on.state === 'run' || on.state === 'lobby') : sess.state === 'run';
   const coasting = online ? (on.state === 'fin' || on.state === 'result') : sess.state === 'fin';
   if (c && driving){ let r = dt; while (r > 0){ const d = Math.min(r, 1/120); update(d); r -= d; if (!(online ? (on.state === 'run' || on.state === 'lobby') : sess.state === 'run')) break; } }
-  else if (c && coasting){ c.v = Math.max(0, c.v - 30 * dt); c.x += Math.sin(c.h) * c.v * dt; c.z += Math.cos(c.h) * c.v * dt; c.boosting = false; }
+  else if (c && coasting){ c.v = Math.max(0, c.v - 30 * dt); c.vh = angLerp(c.vh, c.h, Math.min(1, dt * 6)); c.x += Math.sin(c.vh) * c.v * dt; c.z += Math.cos(c.vh) * c.v * dt; c.boosting = false; c.drift = false; }
   // 다른 사람 차량
   const k10 = 1 - Math.exp(-10 * dt);
   on.remotes.forEach(r => {
     if (Math.hypot(r.tx - r.x, r.tz - r.z) > 40){ r.x = r.tx; r.z = r.tz; r.y = r.ty; r.h = r.th; }
     r.x += (r.tx - r.x) * k10; r.z += (r.tz - r.z) * k10; r.y += (r.ty - r.y) * k10; r.h = angLerp(r.h, r.th, k10);
+    const moved = Math.hypot(r.x - (r.px == null ? r.x : r.px), r.z - (r.pz == null ? r.z : r.pz)); r.px = r.x; r.pz = r.z;
     r.obj.position.set(r.x, r.y, r.z); r.obj.rotation.y = r.h;
+    const rud = r.obj.userData; rud.wheels.forEach(w => { w.w.rotation.x += moved / rud.wr; });
     if (r.boost && rnd() < 0.5) emit(r.x - Math.sin(r.h) * 2.4, r.y + 0.35, r.z - Math.cos(r.h) * 2.4, 2, 1);
+    if (r.drift && rnd() < 0.35){ const rw = rearWheels(r.x, r.z, r.h, rud)[rnd() < 0.5 ? 0 : 1]; addSmoke(rw[0], r.y, rw[1]); }
   });
   // 내 차량
   let camT = c;
@@ -1131,17 +1208,24 @@ function frame(ts){
     const pitch = Math.atan2(a.y - b.y, a.distanceTo(b));
     carObj.position.set(c.x, c.y, c.z);
     carObj.rotation.order = 'YXZ'; carObj.rotation.y = c.h; carObj.rotation.x = -pitch;
-    carObj.userData.body.rotation.z = c.st * 0.05 * Math.min(1, c.v / 56);
+    const ud = carObj.userData, spd = Math.min(1, c.v / 56);
+    const braking = keys.brake && driving && c.v > 2;
+    c.roll = (c.roll || 0) + ((c.st * 0.085 * spd + c.slip * 0.22) - (c.roll || 0)) * Math.min(1, dt * 8);
+    c.nose = (c.nose || 0) + ((braking ? 0.05 : (c.boosting ? -0.045 : (c.v < c.spec.vmax * 0.9 && driving ? -0.018 : 0))) - (c.nose || 0)) * Math.min(1, dt * 7);
+    ud.body.rotation.z = c.roll; ud.body.rotation.x = c.nose;
+    ud.wheels.forEach(w => { w.w.rotation.x += c.v * dt / ud.wr; if (w.front) w.pivot.rotation.y = -c.st * 0.42; });
+    ud.tail.color.setHex(braking ? 0xff4458 : 0x9a1826);
     if (c.v > 3){
       const fx = Math.sin(c.h), fz = Math.cos(c.h);
       emit(c.x - fx * 2.4, c.y + 0.35, c.z - fz * 2.4, c.boosting ? 4 : (rnd() < c.v / 90 ? 1 : 0), c.boosting ? 1.2 : 0.6);
     }
   } else if (online && on.state === 'spec'){
     let lead = null; on.remotes.forEach(r => { if (!lead || r.p > lead.p) lead = r; });
-    if (lead) camT = { x: lead.x, y: lead.y, z: lead.z, h: lead.h, boosting: false };
+    if (lead) camT = { x: lead.x, y: lead.y, z: lead.z, h: lead.h, vh: lead.h, boosting: false };
   }
   if (camT){
-    const fx = Math.sin(camT.h), fz = Math.cos(camT.h), k = 1 - Math.exp(-5 * dt);
+    const camH = camT.vh == null ? camT.h : angLerp(camT.vh, camT.h, 0.35);
+    const fx = Math.sin(camH), fz = Math.cos(camH), k = 1 - Math.exp(-5 * dt);
     const back = camT.boosting ? 13 : 11;
     camera.position.x += (camT.x - fx * back - camera.position.x) * k;
     camera.position.y += (camT.y + 5 - camera.position.y) * k;
@@ -1153,7 +1237,7 @@ function frame(ts){
   // 위치 전송
   if (online && on.room && c && ['lobby', 'count', 'run', 'fin'].includes(on.state) && ts - on.sendT > 55){
     on.sendT = ts;
-    on.room.presence({ x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(2), h: +c.h.toFixed(3), p: c.prog, b: c.boosting ? 1 : 0 }).catch(() => {});
+    on.room.presence({ x: +c.x.toFixed(2), z: +c.z.toFixed(2), y: +c.y.toFixed(2), h: +c.h.toFixed(3), p: c.prog, b: (c.boosting ? 1 : 0) | (c.drift ? 2 : 0) }).catch(() => {});
   }
   // HUD
   if (c){
@@ -1177,7 +1261,7 @@ function frame(ts){
     else { r.g.scale.set(1, 1, 1); r.hmat.opacity = 0.22 + Math.sin(tt * 3 + r.i) * 0.08; }
     if (r.dim > 0){ r.dim -= dt; r.mat.opacity = 0.15; } else r.mat.opacity = 0.95;
   });
-  updateSparks(dt);
+  updateSparks(dt); updateSmoke(dt);
   renderer.render(scene, camera);
   raf = requestAnimationFrame(frame);
 }
@@ -1200,5 +1284,6 @@ window.addEventListener('keyup', e => { if (KEYMAP[e.key]) setKey(KEYMAP[e.key],
 window.addEventListener('blur', () => Object.keys(keys).forEach(k => setKey(k, false)));
 })();
 </script>
+<script>(function(){var d=document.getElementById('how');if(d&&(window.innerWidth<760||matchMedia('(pointer:coarse)').matches))d.removeAttribute('open');})();</script>
 </body>
 </html>

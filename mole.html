@@ -103,6 +103,17 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:6px}
 .legend b{color:var(--text)}
 #practiceBtn{width:100%;margin-top:8px;padding:9px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-weight:900;cursor:pointer}
+
+.how{background:var(--surface)}
+.how summary{cursor:pointer;list-style:none;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:18px;display:flex;justify-content:space-between;align-items:center}
+.how summary::-webkit-details-marker{display:none}
+.how summary::after{content:'접기';font-family:'Gothic A1',sans-serif;font-size:12px;color:var(--muted)}
+.how:not([open]) summary::after{content:'펼치기'}
+.how ul{list-style:none;margin:8px 0 0;padding:0;max-height:none}
+.how li{display:block;border-top:1px solid var(--line);padding:6px 0;font-size:13px;line-height:1.5}
+.how li b{color:var(--accent)}
+#lobbyBox[style*="none"] + .how{display:none}
+@media (max-width:760px){.side{flex-wrap:wrap}.side .how{flex:1 1 100%}}
 </style>
 </head>
 <body>
@@ -169,6 +180,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
         <button id="practiceBtn">20초 연습하기</button>
         <p class="note" id="lobbyNote"></p>
       </div>
+      <details class="box how" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 45초 동안 두더지를 잡아 점수를 모으세요.</li><li><b>갈색 두더지</b> 한 번 치면 10점</li><li><b>안전모 두더지</b> 때려도 돼요! 대신 <b>두 번</b> 쳐야 잡혀요. 첫 번째엔 안전모만 날아가요. 25점</li><li><b>황금 두더지</b> 금방 숨으니 재빨리! 40점</li><li><b>폭탄</b> “위험” 표시, 절대 치지 마세요. −30점</li><li><b>콤보</b> 연속으로 잡으면 점수가 최대 3배까지 올라가요.</li><li>빈 구멍을 치거나 두더지를 놓치면 콤보가 끊겨요. 마구 치는 것보다 정확하게!</li><li>“20초 연습하기”로 먼저 감을 잡아보세요.</li></ul></details>
       <div class="box" id="boardBox" style="display:none">
         <h3>실시간 점수 <small>45초</small></h3>
         <ul id="board"></ul>
@@ -624,5 +636,6 @@ function leaveGame(){
 $('#quit').onclick = leaveGame; $('#editBtn').onclick = leaveGame; $('#againBtn').onclick = () => toLobby();
 })();
 </script>
+<script>(function(){var d=document.getElementById('how');if(d&&(window.innerWidth<760||matchMedia('(pointer:coarse)').matches))d.removeAttribute('open');})();</script>
 </body>
 </html>

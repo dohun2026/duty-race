@@ -9,96 +9,84 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#e9ebf1;--surface:#fff;--text:#171a26;--muted:#5c6275;--line:#c8ccd8;--gold:#f2b632;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1024;--surface:#151b34;--text:#eef0f7;--muted:#9ba3bd;--line:#2c3558;--gold:#f6c24a;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#0b1024;--surface:#151b34;--text:#eef0f7;--muted:#9ba3bd;--line:#2c3558;--gold:#f6c24a;color-scheme:dark}
+:root{--bg:#eef0f5;--surface:#fff;--text:#171a26;--muted:#5c6275;--line:#d6dae4;--gold:#f2b632;
+  --phy:#e8502b;--phy-soft:#fde9e2;--brain:#3b5bdb;--brain-soft:#e3e9fc;
+  color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1020;--surface:#171b30;--text:#eef0f7;--muted:#9ba3bd;--line:#2a3150;--phy:#ff7a52;--phy-soft:#2f1c19;--brain:#7b93ff;--brain-soft:#1b2348;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1020;--surface:#171b30;--text:#eef0f7;--muted:#9ba3bd;--line:#2a3150;--phy:#ff7a52;--phy-soft:#2f1c19;--brain:#7b93ff;--brain-soft:#1b2348;color-scheme:dark}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Gothic A1','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;line-height:1.5}
-.wrap{max-width:760px;margin:0 auto;padding:22px 16px 40px}
-h1{font-family:'Black Han Sans','Gothic A1',sans-serif;font-weight:400;font-size:clamp(40px,10vw,64px);line-height:1;margin:8px 0 6px}
-.sub{color:var(--muted);margin:0 0 20px}
-.games{display:grid;gap:14px}
-a.game{display:block;text-decoration:none;color:#fff;border-radius:16px;padding:22px 20px;position:relative;overflow:hidden;min-height:150px}
-a.game h2{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:34px;margin:0 0 6px;line-height:1.05}
-a.game p{margin:0;max-width:26em;font-size:14px;opacity:.9}
-a.game .go{position:absolute;right:16px;bottom:14px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:6px 14px;font-weight:900;font-size:14px}
-a.game:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
-.race{background:linear-gradient(160deg,#0a1433,#1b2b63 60%,#2a3c7a)}
-.bump{background:linear-gradient(160deg,#140b2e,#3a1b5e 60%,#6a2a6e)}
-.arch{background:linear-gradient(160deg,#2a1a0a,#7a3b12 55%,#c9702a)}
-.spot{background:linear-gradient(160deg,#b8365e,#d9667f 55%,#e8a05a)}
-.mole{background:linear-gradient(160deg,#3f7d2a,#6aa84f 55%,#c99a3a)}
-.tick{background:linear-gradient(160deg,#2b2f8a,#5a5fd6 55%,#9a7fe0)}
-.quiz{background:linear-gradient(160deg,#124a6e,#1f6f9e 55%,#3a9a8a)}
-.tag{display:inline-block;font-size:12px;font-weight:900;background:var(--gold);color:#171a26;border-radius:6px;padding:2px 7px;margin-bottom:8px}
-.soon{border:1.5px dashed var(--line);border-radius:16px;padding:18px 20px;color:var(--muted);font-size:14px}
-.last{margin-top:18px;font-size:13px;color:var(--muted)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Gothic A1','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;line-height:1.45}
+.wrap{max-width:980px;margin:0 auto;padding:18px 14px 40px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+h1{font-family:'Black Han Sans','Gothic A1',sans-serif;font-weight:400;font-size:clamp(30px,7vw,44px);line-height:1;margin:0}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.zones{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:720px){.zones{grid-template-columns:1fr}}
+.zone{border-radius:18px;padding:14px;border:1.5px solid var(--line);background:var(--surface)}
+.zone.phy{background:linear-gradient(180deg,var(--phy-soft),var(--surface) 140px)}
+.zone.brain{background:linear-gradient(180deg,var(--brain-soft),var(--surface) 140px)}
+.zhead{display:flex;align-items:baseline;gap:10px;margin:2px 4px 12px}
+.zhead h2{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:32px;margin:0;line-height:1}
+.phy .zhead h2{color:var(--phy)} .brain .zhead h2{color:var(--brain)}
+.zhead p{margin:0;color:var(--muted);font-size:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+a.g{position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:104px;padding:12px;border-radius:14px;color:#fff;text-decoration:none;overflow:hidden}
+a.g::after{content:"";position:absolute;right:-18px;top:-18px;width:74px;height:74px;border-radius:50%;background:rgba(255,255,255,.12)}
+a.g b{font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:21px;line-height:1.1;position:relative;z-index:1}
+a.g span{font-size:12px;opacity:.9;margin-top:3px;position:relative;z-index:1}
+a.g i{position:absolute;top:10px;left:12px;font-style:normal;font-size:11px;font-weight:900;background:rgba(0,0,0,.25);border-radius:6px;padding:2px 6px}
+a.g em{position:absolute;top:10px;right:10px;font-style:normal;font-size:11px;font-weight:900;background:var(--gold);color:#171a26;border-radius:6px;padding:2px 6px;z-index:2}
+a.g:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+a.g:active{transform:scale(.98)}
+.race{background:linear-gradient(150deg,#0a1433,#2a3c7a)}
+.bump{background:linear-gradient(150deg,#2a0f4a,#7a2a6e)}
+.mole{background:linear-gradient(150deg,#3f7d2a,#b38a2a)}
+.arch{background:linear-gradient(150deg,#5a2a0a,#c9702a)}
+.tick{background:linear-gradient(150deg,#2b2f8a,#8a7fe0)}
+.type{background:linear-gradient(150deg,#14524a,#2aa58a)}
+.spot{background:linear-gradient(150deg,#a32d55,#e08a5a)}
+.quiz{background:linear-gradient(150deg,#124a6e,#3a9a8a)}
+.wide{grid-column:1 / -1;min-height:120px}
+.last{margin-top:16px;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>당직 게임 센터</h1>
-  <p class="sub">오늘 당직은 실력으로. 각자 휴대폰이나 PC로 같은 게임에 들어오세요.</p>
-  <div class="games">
-    <a class="game race" href="race.html">
-      <span class="tag">레이싱</span>
-      <h2>당직 레이스 3D</h2>
-      <p>산악 고가도로를 동시에 달리는 타임어택. 링으로 부스트를 모으고 벽을 피하세요.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <a class="game bump" href="bumper.html">
-      <span class="tag">대결</span>
-      <h2>범퍼카 아레나</h2>
-      <p>줄어드는 원형 무대에서 서로 들이받아 떨어뜨리기. 마지막까지 버티는 사람이 승리.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <a class="game arch" href="archery.html">
-      <span class="tag">정밀</span>
-      <h2>바람의 양궁</h2>
-      <p>50m 과녁에 3발씩 3세트. 계속 바뀌는 바람을 읽고 조준점과 힘을 맞추세요. 실시간 점수판.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <a class="game spot" href="spot.html">
-      <span class="tag">관찰력</span>
-      <h2>틀린그림찾기</h2>
-      <p>두 그림에서 다른 곳 5개씩, 3라운드. 판마다 새 그림이 만들어지고 모두 같은 그림을 받습니다.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <a class="game mole" href="mole.html">
-      <span class="tag">순발력</span>
-      <h2>두더지 잡기</h2>
-      <p>45초 동안 두더지를 잡으세요. 안전모 두더지는 두 번, 황금 두더지는 재빨리, 폭탄은 피하기. 콤보로 점수 폭발.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <a class="game tick" href="timer.html">
-      <span class="tag">감각</span>
-      <h2>10초 맞추기</h2>
-      <p>사라진 시계를 감으로 멈추기. 5라운드 오차 합계로 승부. 손 빠르기와 상관없는 가장 공평한 게임.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <a class="game quiz" href="quiz.html">
-      <span class="tag">지식</span>
-      <h2>건축·안전 퀴즈</h2>
-      <p>콘크리트, 비파괴시험, 구조역학, 산업안전 44문제 중 10문제. 빨리 맞힐수록 고득점. 직접 문제 추가 가능.</p>
-      <span class="go">들어가기</span>
-    </a>
-    <div class="soon">다음 게임 준비 중</div>
+  <header>
+    <div>
+      <h1>당직 게임 센터</h1>
+      <p class="sub">오늘 당직은 실력으로. 같은 게임에 같이 들어오세요.</p>
+    </div>
+  </header>
+  <div class="zones">
+    <section class="zone phy">
+      <div class="zhead"><h2>피지컬</h2><p>손놀림 · 반응속도 · 감각</p></div>
+      <div class="grid">
+        <a class="g race" href="race.html"><i>레이싱</i><b>당직 레이스</b><span>산악 고가도로 타임어택</span></a>
+        <a class="g bump" href="bumper.html"><i>대결</i><b>범퍼카 아레나</b><span>밀어내고 끝까지 버티기</span></a>
+        <a class="g mole" href="mole.html"><i>순발력</i><b>두더지 잡기</b><span>안전모 두더지 조심</span></a>
+        <a class="g arch" href="archery.html"><i>정밀</i><b>바람의 양궁</b><span>3발 × 3세트</span></a>
+        <a class="g tick" href="timer.html"><i>감각</i><b>10초 맞추기</b><span>사라진 시계를 감으로</span></a>
+        <a class="g type" href="typing.html"><em>NEW</em><i>타자</i><b>타자 대결</b><span>한글 · 영문 · 한영 통합</span></a>
+      </div>
+    </section>
+    <section class="zone brain">
+      <div class="zhead"><h2>뇌지컬</h2><p>관찰력 · 지식 · 상식</p></div>
+      <div class="grid">
+        <a class="g spot wide" href="spot.html"><i>관찰력</i><b>틀린그림찾기</b><span>다른 곳 5개씩, 3라운드</span></a>
+        <a class="g quiz wide" href="quiz.html"><i>지식</i><b>퀴즈 센터</b><span>건축안전 282 · 상식 142 · 역사 83 · 넌센스 79</span></a>
+      </div>
+    </section>
   </div>
   <p class="last" id="last"></p>
 </div>
 <script>
 (function(){
   function load(k){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }catch(e){ return null; } }
-  const a = load('dr3d-last'), b = load('bump-last'), c = load('arch-last'), d = load('diff-last'), e = load('mole-last'), f = load('tick-last'), g = load('quiz-last'), parts = [];
-  if (a) parts.push(`레이스 지난 당직: ${a.who} (${a.date})`);
-  if (b) parts.push(`범퍼카 지난 당직: ${b.who} (${b.date})`);
-  if (c) parts.push(`양궁 지난 당직: ${c.who} (${c.date})`);
-  if (d) parts.push(`틀린그림 지난 당직: ${d.who} (${d.date})`);
-  if (e) parts.push(`두더지 지난 당직: ${e.who} (${e.date})`);
-  if (f) parts.push(`10초 지난 당직: ${f.who} (${f.date})`);
-  if (g) parts.push(`퀴즈 지난 당직: ${g.who} (${g.date})`);
-  document.getElementById('last').textContent = parts.join(' / ');
-  const q = location.search; if (q) document.querySelectorAll('a.game').forEach(x => x.href += q);
+  const names = { 'dr3d-last': '레이스', 'bump-last': '범퍼카', 'mole-last': '두더지', 'arch-last': '양궁', 'tick-last': '10초', 'type-last': '타자', 'diff-last': '틀린그림', 'quiz-last': '퀴즈' };
+  const parts = []; Object.keys(names).forEach(k => { const v = load(k); if (v && v.who) parts.push(`${names[k]} ${v.who} (${v.date})`); });
+  document.getElementById('last').textContent = parts.length ? '최근 당직: ' + parts.join(' · ') : '';
+  const q = location.search; if (q) document.querySelectorAll('a.g').forEach(x => x.href += q);
 })();
 </script>
 </body>

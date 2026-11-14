@@ -94,6 +94,17 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 .btns button{flex:1;padding:13px;border-radius:10px;font:inherit;font-weight:900;cursor:pointer}
 .btns .primary{background:var(--accent);color:#fff;border:0}
 .btns .ghost{background:transparent;color:var(--text);border:1.5px solid var(--line)}
+
+.how{background:var(--surface)}
+.how summary{cursor:pointer;list-style:none;font-family:'Black Han Sans',sans-serif;font-weight:400;font-size:18px;display:flex;justify-content:space-between;align-items:center}
+.how summary::-webkit-details-marker{display:none}
+.how summary::after{content:'접기';font-family:'Gothic A1',sans-serif;font-size:12px;color:var(--muted)}
+.how:not([open]) summary::after{content:'펼치기'}
+.how ul{list-style:none;margin:8px 0 0;padding:0;max-height:none}
+.how li{display:block;border-top:1px solid var(--line);padding:6px 0;font-size:13px;line-height:1.5}
+.how li b{color:var(--accent)}
+#lobbyBox[style*="none"] + .how{display:none}
+@media (max-width:760px){.side{flex-wrap:wrap}.side .how{flex:1 1 100%}}
 </style>
 </head>
 <body>
@@ -164,6 +175,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
         <button class="start" id="raceBtn">경기 시작</button>
         <p class="note" id="lobbyNote"></p>
       </div>
+      <details class="box how" id="how" open><summary>게임 방법</summary><ul><li><b>목표</b> 두 그림에서 다른 곳 5개를 빨리 찾기.</li><li>왼쪽이든 오른쪽이든 <b>다른 곳을 누르면</b> 양쪽에 동그라미가 그려져요.</li><li>색이 바뀐 것, 없어진 것, 작아진 것, 좌우가 뒤집힌 것, 시계 바늘이나 창문 불처럼 작은 부분이 바뀐 것이 있어요.</li><li><b>틀린 곳을 누르면 +3초</b>. 마구 누르면 손해예요.</li><li>라운드당 60초, 못 찾은 곳은 하나에 +15초.</li><li>3라운드 합계 시간이 짧을수록 좋아요.</li><li>“새 연습 그림”으로 계속 연습할 수 있어요.</li></ul></details>
       <div class="box" id="boardBox" style="display:none">
         <h3>실시간 현황 <small id="boardSub"></small></h3>
         <ul id="board"></ul>
@@ -670,5 +682,6 @@ function loop(){
 }
 })();
 </script>
+<script>(function(){var d=document.getElementById('how');if(d&&(window.innerWidth<760||matchMedia('(pointer:coarse)').matches))d.removeAttribute('open');})();</script>
 </body>
 </html>
